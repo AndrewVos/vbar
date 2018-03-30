@@ -23,6 +23,9 @@ public class VbarWindow : Gtk.Window {
   private int monitor_y;
 
   private Gtk.Box box;
+  private Gtk.Box boxLeft;
+  private Gtk.Box boxCenter;
+  private Gtk.Box boxRight;
 
   public VbarWindow() {
     Object(
@@ -45,53 +48,61 @@ public class VbarWindow : Gtk.Window {
     css_provider.load_from_path("styles.css");
     Gtk.StyleContext.add_provider_for_screen(screen, css_provider, Gtk.STYLE_PROVIDER_PRIORITY_USER);
 
-    var bar_configuration = load_bar_configuration();
+    var block_configuration = load_block_configuration();
 
-    box = new Gtk.Box(Gtk.Orientation.HORIZONTAL, 10);
-    box.get_style_context().add_class("box");
-    this.add(box);
+    this.box = new Gtk.Box(Gtk.Orientation.HORIZONTAL, 0);
+    this.add(this.box);
 
-    for (var i = 0; i < bar_configuration.bars.length; i++) {
-      var bar = bar_configuration.bars[i];
-      var label = new Gtk.Label(bar.name);
-      label.get_style_context().add_class(bar.name);
-      box.add(label);
+    this.boxLeft = new Gtk.Box(Gtk.Orientation.HORIZONTAL, 0);
+    this.boxLeft.get_style_context().add_class("box");
+    this.box.pack_start(this.boxLeft);
+
+    this.boxCenter = new Gtk.Box(Gtk.Orientation.HORIZONTAL, 0);
+    this.boxCenter.get_style_context().add_class("box");
+    this.box.pack_start(this.boxCenter, true, true);
+    this.box.set_center_widget(this.boxCenter);
+
+    this.boxRight = new Gtk.Box(Gtk.Orientation.HORIZONTAL, 0);
+    this.boxRight.get_style_context().add_class("box");
+    this.box.pack_end(this.boxRight, false, true);
+
+    for (var i = 0; i < block_configuration.left.length; i++) {
+      this.boxLeft.add(block_configuration.left[i].label);
+    }
+    for (var i = 0; i < block_configuration.center.length; i++) {
+      this.boxCenter.add(block_configuration.center[i].label);
+    }
+    for (var i = 0; i < block_configuration.right.length; i++) {
+      this.boxRight.add(block_configuration.right[i].label);
     }
   }
 
-  private string execute_command_sync_get_output (string cmd)
-  {
-    try {
-      int exitCode;
-      string std_out;
-      Process.spawn_command_line_sync(cmd, out std_out, null, out exitCode);
-      return std_out;
-    }
-    catch (Error e){
-      log_error (e.message);
-      return "";
-    }
-  }
-
-  private void log_error(string message) {
-    GLib.print("error: " + message + "\n");
-  }
-
-  private BarConfiguration load_bar_configuration() {
+  private BlockConfiguration load_block_configuration() {
     var parser = new Json.Parser();
     parser.load_from_file("config.json");
-    var bars = parser.get_root().get_array();
+    var left = parser.get_root().get_object().get_array_member("left");
+    var center = parser.get_root().get_object().get_array_member("center");
+    var right = parser.get_root().get_object().get_array_member("right");
 
-    var bar_configuration = new BarConfiguration();
-    bar_configuration.bars = new Bar[bars.get_length()];
+    var block_configuration = new BlockConfiguration();
+    block_configuration.left = new Block[left.get_length()];
+    block_configuration.center = new Block[center.get_length()];
+    block_configuration.right = new Block[right.get_length()];
 
-    for (var i = 0; i < bars.get_length(); i++) {
-      var element = bars.get_object_element(i);
-      bar_configuration.bars[i] = new Bar();
-      bar_configuration.bars[i].name = element.get_string_member("name");
+    for (var i = 0; i < left.get_length(); i++) {
+      var element = left.get_object_element(i);
+      block_configuration.left[i] = new Block(element);
+    }
+    for (var i = 0; i < center.get_length(); i++) {
+      var element = center.get_object_element(i);
+      block_configuration.center[i] = new Block(element);
+    }
+    for (var i = 0; i < right.get_length(); i++) {
+      var element = right.get_object_element(i);
+      block_configuration.right[i] = new Block(element);
     }
 
-    return bar_configuration;
+    return block_configuration;
   }
 
   private void on_realize() {
@@ -131,7 +142,7 @@ public class VbarWindow : Gtk.Window {
 
     this.screen.get_monitor_geometry(monitor, out primary_monitor_rect);
 
-    var box_height = this.box.get_allocated_height();
+    var box_height = this.boxLeft.get_allocated_height();
 
     struts = { 0, 0, box_height , 0, /* strut-left, strut-right, strut-top, strut-bottom */
       0, 0, /* strut-left-start-y, strut-left-end-y */
@@ -146,14 +157,45 @@ public class VbarWindow : Gtk.Window {
   }
 }
 
-class BarConfiguration {
-  public Bar[] bars;
+class BlockConfiguration {
+  public Block[] left;
+  public Block[] center;
+  public Block[] right;
 
-  public BarConfiguration() {}
+  public BlockConfiguration() {}
 }
 
-class Bar {
-  public string name;
-  public string command;
-  public Bar() {}
+class Block {
+  private string name;
+  private string text;
+  private string command;
+  private double interval;
+  public Gtk.Label label;
+
+  public Block(Json.Object element) {
+    this.name = element.get_string_member("name");
+    this.text = element.get_string_member("text");
+    this.command = element.get_string_member("command");
+    this.interval = element.get_double_member("interval");
+
+    this.label = new Gtk.Label(this.text);
+    this.label.get_style_context().add_class("block");
+    this.label.get_style_context().add_class(name);
+
+    if (this.interval > 0 && this.command != null) {
+      this.start_updating();
+    }
+  }
+
+  public void start_updating() {
+    this.update_label();
+
+    uint intervalMilliseconds = (uint)(this.interval * 1000);
+    GLib.Timeout.add(intervalMilliseconds, () => { this.update_label(); return true; }, GLib.Priority.DEFAULT);
+  }
+
+  private void update_label() {
+    string text = Executor.execute(this.command);
+    this.label.set_text(text);
+  }
 }

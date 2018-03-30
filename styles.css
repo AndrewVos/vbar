@@ -1,13 +1,47 @@
 .box {
   font-family: "Hack", "Font Awesome", sans-serif;
   font-size: 20px;
-  background-color: white;
+  background-color: #261d18;
+  border: 10px solid #261d18;
+}
+
+.block {
+  padding-top: 5px;
+  padding-bottom: 5px;
+  padding-left: 10px;
+  padding-right: 10px;
+  color: #b39a8f;
+}
+
+.power-off-icon {
+  background-color: #3b2d26;
+}
+
+.battery-icon {
+  background-color: #3b2d26;
 }
 
 .battery {
-  color: red;
+  background-color: #30251f;
+  margin-right: 10px;
+}
+
+.wireless-icon {
+  background-color: #3b2d26;
 }
 
 .wireless {
-  color: blue;
+  background-color: #30251f;
+  margin-right: 10px;
+}
+
+.date {
+  background-color: #30251f;
+  margin-right: 10px;
+}
+
+.time {
+  background-color: #c77e64;
+  color: #261d18;
+  margin-right: 0px;
 }

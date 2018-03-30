@@ -1,10 +1,44 @@
-[
-  {
-    "name": "battery",
-    "command": "acpi | cut -d, -f2"
-  },
-  {
-    "name": "wireless",
-    "command": "pwd"
-  }
-]
+{
+  "left": [
+    {
+      "name": "power-off-icon",
+      "text": ""
+    }
+  ],
+  "center": [
+    {
+      "name": "title",
+      "text": "Welcome to vbar"
+    }
+  ],
+  "right": [
+    {
+      "name": "battery-icon",
+      "text": ""
+    },
+    {
+      "name": "battery",
+      "command": "acpi | cut -d, -f2",
+      "interval": 1
+    },
+    {
+      "name": "wireless-icon",
+      "text": ""
+    },
+    {
+      "name": "wireless",
+      "command": "netctl-auto list | grep '* ' | sed 's/* //'",
+      "interval": 5
+    },
+    {
+      "name": "date",
+      "command": "date +%d/%m",
+      "interval": 60
+    },
+    {
+      "name": "time",
+      "command": "date +%H:%M",
+      "interval": 60
+    }
+  ]
+}
