@@ -1,0 +1,10 @@
+[
+  {
+    "name": "battery",
+    "command": "acpi | cut -d, -f2"
+  },
+  {
+    "name": "wireless",
+    "command": "pwd"
+  }
+]

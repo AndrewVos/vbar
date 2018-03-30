@@ -21,7 +21,8 @@ public class VbarWindow : Gtk.Window {
   private int monitor_height;
   private int monitor_x;
   private int monitor_y;
-  private int panel_height;
+
+  private Gtk.Box box;
 
   public VbarWindow() {
     Object(
@@ -36,31 +37,61 @@ public class VbarWindow : Gtk.Window {
 
     monitor_number = screen.get_primary_monitor();
 
-    var style_context = get_style_context();
-    style_context.add_class(Gtk.STYLE_CLASS_MENUBAR);
-
     this.screen.size_changed.connect(update_panel_dimensions);
     this.screen.monitors_changed.connect(update_panel_dimensions);
     this.realize.connect(on_realize);
 
-    panel_height = 20;
-
     var css_provider = new Gtk.CssProvider();
-
-    string path = "styles.css";
-    css_provider.load_from_path(path);
+    css_provider.load_from_path("styles.css");
     Gtk.StyleContext.add_provider_for_screen(screen, css_provider, Gtk.STYLE_PROVIDER_PRIORITY_USER);
 
-    var box = new Gtk.Box(Gtk.Orientation.HORIZONTAL, 10);
+    var bar_configuration = load_bar_configuration();
+
+    box = new Gtk.Box(Gtk.Orientation.HORIZONTAL, 10);
+    box.get_style_context().add_class("box");
     this.add(box);
 
-    var label = new Gtk.Label("\uf240");
-    label.get_style_context().add_class("my_class");
-    box.add(label);
+    for (var i = 0; i < bar_configuration.bars.length; i++) {
+      var bar = bar_configuration.bars[i];
+      var label = new Gtk.Label(bar.name);
+      label.get_style_context().add_class(bar.name);
+      box.add(label);
+    }
+  }
 
-    var label2 = new Gtk.Label("100%");
-    label2.get_style_context().add_class("my_class");
-    box.add(label2);
+  private string execute_command_sync_get_output (string cmd)
+  {
+    try {
+      int exitCode;
+      string std_out;
+      Process.spawn_command_line_sync(cmd, out std_out, null, out exitCode);
+      return std_out;
+    }
+    catch (Error e){
+      log_error (e.message);
+      return "";
+    }
+  }
+
+  private void log_error(string message) {
+    GLib.print("error: " + message + "\n");
+  }
+
+  private BarConfiguration load_bar_configuration() {
+    var parser = new Json.Parser();
+    parser.load_from_file("config.json");
+    var bars = parser.get_root().get_array();
+
+    var bar_configuration = new BarConfiguration();
+    bar_configuration.bars = new Bar[bars.get_length()];
+
+    for (var i = 0; i < bars.get_length(); i++) {
+      var element = bars.get_object_element(i);
+      bar_configuration.bars[i] = new Bar();
+      bar_configuration.bars[i].name = element.get_string_member("name");
+    }
+
+    return bar_configuration;
   }
 
   private void on_realize() {
@@ -74,7 +105,7 @@ public class VbarWindow : Gtk.Window {
     monitor_width = monitor_dimensions.width;
     monitor_height = monitor_dimensions.height;
 
-    this.set_size_request(monitor_width, panel_height);
+    this.set_size_request(monitor_width, -1);
 
     monitor_x = monitor_dimensions.x;
     monitor_y = monitor_dimensions.y;
@@ -100,8 +131,9 @@ public class VbarWindow : Gtk.Window {
 
     this.screen.get_monitor_geometry(monitor, out primary_monitor_rect);
 
-    // We need to manually include the scale factor here as GTK gives us unscaled sizes for widgets
-    struts = { 0, 0, panel_height , 0, /* strut-left, strut-right, strut-top, strut-bottom */
+    var box_height = this.box.get_allocated_height();
+
+    struts = { 0, 0, box_height , 0, /* strut-left, strut-right, strut-top, strut-bottom */
       0, 0, /* strut-left-start-y, strut-left-end-y */
       0, 0, /* strut-right-start-y, strut-right-end-y */
       monitor_x, monitor_x + monitor_width - 1, /* strut-top-start-x, strut-top-end-x */
@@ -112,4 +144,16 @@ public class VbarWindow : Gtk.Window {
     Gdk.property_change(this.get_window(), atom, Gdk.Atom.intern("CARDINAL", false),
     32, Gdk.PropMode.REPLACE, (uint8[])struts, 12);
   }
+}
+
+class BarConfiguration {
+  public Bar[] bars;
+
+  public BarConfiguration() {}
+}
+
+class Bar {
+  public string name;
+  public string command;
+  public Bar() {}
 }

@@ -1,4 +1,13 @@
-.my_class {
-  font-family: "Font Awesome", sans-serif;
+.box {
+  font-family: "Hack", "Font Awesome", sans-serif;
   font-size: 20px;
+  background-color: white;
+}
+
+.battery {
+  color: red;
+}
+
+.wireless {
+  color: blue;
 }
