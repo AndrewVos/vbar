@@ -7,7 +7,7 @@ class Executor {
       if (exitCode > 0) {
         return "ERROR";
       }
-      return std_out.strip();
+      return std_out.replace("\n", "");
     }
     catch (Error e) {
       Logger.error(e.message);

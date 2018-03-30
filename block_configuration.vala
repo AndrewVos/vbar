@@ -7,7 +7,13 @@ class BlockConfiguration {
 
   public static BlockConfiguration from_file(string path) {
     var parser = new Json.Parser();
-    parser.load_from_file(path);
+
+    try {
+      parser.load_from_file(path);
+    } catch (GLib.Error error) {
+      Logger.fatal(error.message);
+    }
+
     var left = parser.get_root().get_object().get_array_member("left");
     var center = parser.get_root().get_object().get_array_member("center");
     var right = parser.get_root().get_object().get_array_member("right");
