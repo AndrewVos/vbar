@@ -1,8 +1,10 @@
 {
   "styles": {
     "panel": [
-      "font-family: \"Hack\", \"Font Awesome\", sans-serif;",
+      "font-family: Hack;",
+      "font-weight: normal;",
       "font-size: 20px;",
+      "text-shadow: none;",
       "background-color: #261d18;",
       "border: 10px solid #261d18;"
     ],
@@ -14,9 +16,11 @@
       "color: #b39a8f;"
     ],
     "power-off-icon": [
+      "font-family: \"Font Awesome\"",
       "background-color: #3b2d26;"
     ],
     "battery-icon": [
+      "font-family: \"Font Awesome\"",
       "background-color: #3b2d26;"
     ],
     "battery": [
@@ -24,6 +28,7 @@
       "margin-right: 10px;"
     ],
     "wireless-icon": [
+      "font-family: \"Font Awesome\"",
       "background-color: #3b2d26;"
     ],
     "wireless": [
@@ -57,7 +62,7 @@
     "right": [
       {
         "name": "battery-icon",
-        "text": ""
+        "text": ""
       },
       {
         "name": "battery",
