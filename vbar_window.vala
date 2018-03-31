@@ -16,29 +16,13 @@ public class VbarWindow : Gtk.ApplicationWindow {
 
     var config = GLib.Environment.get_user_config_dir();
     string config_path = config + "/vbar/config.json";
-    string css_path = config + "/vbar/styles.css";
-    if (!FileUtils.test(css_path, FileTest.EXISTS)) {
-      Logger.error("Couldn't find css at \"" + css_path + "\"");
-      this.application.quit();
-      return;
-    }
     if (!FileUtils.test(config_path, FileTest.EXISTS)) {
       Logger.error("Couldn't find config at \"" + config_path + "\"");
       this.application.quit();
       return;
     }
 
-    var css_provider = new Gtk.CssProvider();
-    try {
-      css_provider.load_from_path(css_path);
-    } catch (GLib.Error error) {
-      Logger.error(error.message);
-      this.application.quit();
-      return;
-    }
-    Gtk.StyleContext.add_provider_for_screen(screen, css_provider, Gtk.STYLE_PROVIDER_PRIORITY_USER);
-
-    this.panel = new Panel();
+    this.panel = new Panel(this.screen);
     try {
       this.panel.load_from_path(config_path);
     } catch (GLib.Error error) {
@@ -70,9 +54,9 @@ public class VbarWindow : Gtk.ApplicationWindow {
 
     long struts[12];
 
-    var box_height = this.panel.height();
+    var panel_height = this.panel.get_allocated_height();
 
-    struts = { 0, 0, box_height , 0, /* strut-left, strut-right, strut-top, strut-bottom */
+    struts = { 0, 0, panel_height , 0, /* strut-left, strut-right, strut-top, strut-bottom */
       0, 0, /* strut-left-start-y, strut-left-end-y */
       0, 0, /* strut-right-start-y, strut-right-end-y */
       monitor_dimensions.x, monitor_dimensions.x + monitor_dimensions.width - 1, /* strut-top-start-x, strut-top-end-x */

@@ -4,10 +4,12 @@ class Block : Gtk.EventBox {
   private string block_click_command;
   private string block_command;
   private double block_interval;
+
   private Gtk.Label label;
 
   public Block(Json.Object element) {
     Object();
+
     if (element.has_member("name")) {
       this.block_name = element.get_string_member("name");
     }
