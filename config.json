@@ -2,7 +2,8 @@
   "left": [
     {
       "name": "power-off-icon",
-      "text": ""
+      "text": "",
+      "click_command": "systemctl poweroff"
     }
   ],
   "center": [

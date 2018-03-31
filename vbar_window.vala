@@ -53,13 +53,13 @@ public class VbarWindow : Gtk.Window {
     this.box.pack_end(this.boxRight, false, true);
 
     for (var i = 0; i < block_configuration.left.length; i++) {
-      this.boxLeft.add(block_configuration.left[i].label);
+      this.boxLeft.add(block_configuration.left[i].widget());
     }
     for (var i = 0; i < block_configuration.center.length; i++) {
-      this.boxCenter.add(block_configuration.center[i].label);
+      this.boxCenter.add(block_configuration.center[i].widget());
     }
     for (var i = 0; i < block_configuration.right.length; i++) {
-      this.boxRight.add(block_configuration.right[i].label);
+      this.boxRight.add(block_configuration.right[i].widget());
     }
   }
 

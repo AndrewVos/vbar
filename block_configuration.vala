@@ -41,4 +41,3 @@ class BlockConfiguration {
     return block_configuration;
   }
 }
-
