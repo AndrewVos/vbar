@@ -49,8 +49,8 @@ class Block : Gtk.EventBox {
         menu.popup_at_widget(this.label, Gdk.Gravity.SOUTH_WEST, Gdk.Gravity.NORTH_WEST, null);
         return true;
       });
-    } else if (element.has_member("click_command")) {
-      string command = element.get_string_member("click_command");
+    } else if (element.has_member("click-command")) {
+      string command = element.get_string_member("click-command");
       this.button_release_event.connect(() => {
         Executor.execute(command);
         return true;
