@@ -86,7 +86,7 @@
       {
         "name": "time",
         "command": "date +%H:%M",
-        "interval": 60
+        "interval": 1
       }
     ]
   }
