@@ -19,7 +19,7 @@
     },
     {
       "name": "battery",
-      "command": "acpi | cut -d, -f2",
+      "command": "acpi | cut -d, -f2 | sed 's/ //'",
       "interval": 1
     },
     {

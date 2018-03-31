@@ -4,8 +4,7 @@ public class VbarApplication : Gtk.Application {
   }
 
   protected override void activate() {
-    this.hold();
-    var window = new VbarWindow();
+    var window = new VbarWindow(this);
     window.show_all();
   }
 

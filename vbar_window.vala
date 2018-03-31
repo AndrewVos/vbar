@@ -1,4 +1,4 @@
-public class VbarWindow : Gtk.Window {
+public class VbarWindow : Gtk.ApplicationWindow {
   private Gdk.Monitor? monitor;
   private int monitor_width;
   private int monitor_height;
@@ -10,8 +10,9 @@ public class VbarWindow : Gtk.Window {
   private Gtk.Box boxCenter;
   private Gtk.Box boxRight;
 
-  public VbarWindow() {
+  public VbarWindow(Gtk.Application application) {
     Object(
+      application: application,
       app_paintable: true,
       decorated: false,
       resizable: false,
@@ -21,21 +22,44 @@ public class VbarWindow : Gtk.Window {
       vexpand: false
     );
 
+    var config = GLib.Environment.get_user_config_dir();
+    string config_path = config + "/vbar/config.json";
+    string css_path = config + "/vbar/styles.css";
+    if (!FileUtils.test(css_path, FileTest.EXISTS)) {
+      Logger.error("Couldn't find css at \"" + css_path + "\"");
+      this.application.quit();
+      return;
+    }
+    if (!FileUtils.test(config_path, FileTest.EXISTS)) {
+      Logger.error("Couldn't find config at \"" + config_path + "\"");
+      this.application.quit();
+      return;
+    }
+
+    var css_provider = new Gtk.CssProvider();
+    try {
+      css_provider.load_from_path(css_path);
+    } catch (GLib.Error error) {
+      Logger.error(error.message);
+      this.application.quit();
+      return;
+    }
+    Gtk.StyleContext.add_provider_for_screen(screen, css_provider, Gtk.STYLE_PROVIDER_PRIORITY_USER);
+
+    var block_configuration = new BlockConfiguration();
+    try {
+      block_configuration.load_from_path(config_path);
+    } catch (GLib.Error error) {
+      Logger.error(error.message);
+      this.application.quit();
+      return;
+    }
+
     monitor = this.get_display().get_primary_monitor();
 
     this.screen.size_changed.connect(update_panel_dimensions);
     this.screen.monitors_changed.connect(update_panel_dimensions);
     this.realize.connect(on_realize);
-
-    var css_provider = new Gtk.CssProvider();
-    try {
-      css_provider.load_from_path("styles.css");
-    } catch (GLib.Error error) {
-      Logger.fatal(error.message);
-    }
-    Gtk.StyleContext.add_provider_for_screen(screen, css_provider, Gtk.STYLE_PROVIDER_PRIORITY_USER);
-
-    var block_configuration = BlockConfiguration.from_file("config.json");
 
     this.box = new Gtk.Box(Gtk.Orientation.HORIZONTAL, 0);
     this.add(this.box);
