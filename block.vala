@@ -1,7 +1,6 @@
 class Block : Gtk.EventBox {
   private string block_name;
   private string block_text;
-  private string block_click_command;
   private string block_command;
   private double block_interval;
 
@@ -16,9 +15,6 @@ class Block : Gtk.EventBox {
     if (element.has_member("text")) {
       this.block_text = element.get_string_member("text");
     }
-    if (element.has_member("click_command")) {
-      this.block_click_command = element.get_string_member("click_command");
-    }
     if (element.has_member("command")) {
       this.block_command = element.get_string_member("command");
     }
@@ -31,8 +27,30 @@ class Block : Gtk.EventBox {
     this.label.get_style_context().add_class(this.block_name);
     this.add(this.label);
 
-    if (this.block_click_command != null) {
-      string command = this.block_click_command;
+    if (element.has_member("menu-items")) {
+      var menu_items = element.get_array_member("menu-items");
+      var menu = new Gtk.Menu();
+      menu.get_style_context().add_class("menu");
+      for (var i = 0; i < menu_items.get_length(); i++) {
+        var menu_item = menu_items.get_object_element(i);
+
+        var text = menu_item.get_string_member("text");
+        var command = menu_item.get_string_member("command");
+
+        Gtk.MenuItem item = new Gtk.MenuItem.with_label(text);
+        item.activate.connect(() => {
+          Executor.execute(command);
+        });
+        menu.add(item);
+      }
+      menu.show_all();
+
+      this.button_release_event.connect(() => {
+        menu.popup_at_widget(this.label, Gdk.Gravity.SOUTH_WEST, Gdk.Gravity.NORTH_WEST, null);
+        return true;
+      });
+    } else if (element.has_member("click_command")) {
+      string command = element.get_string_member("click_command");
       this.button_release_event.connect(() => {
         Executor.execute(command);
         return true;

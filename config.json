@@ -15,6 +15,19 @@
       "padding-right: 10px;",
       "color: #b39a8f;"
     ],
+    "menu": [
+      "font-family: Hack;",
+      "font-weight: normal;",
+      "font-size: 20px;",
+      "text-shadow: none;",
+      "background-color: #261d18;",
+      "color: #b39a8f;",
+      "border: 10px solid #261d18;"
+    ],
+    "menu :hover": [
+      "background-color: #30251f;",
+      "color: #b39a8f;"
+    ],
     "power-off-icon": [
       "font-family: \"Font Awesome\"",
       "background-color: #3b2d26;"
@@ -50,7 +63,16 @@
       {
         "name": "power-off-icon",
         "text": "",
-        "click_command": "systemctl poweroff"
+        "menu-items": [
+          {
+            "text": "Log off",
+            "command": "bspc quit"
+          },
+          {
+            "text": "Shut down",
+            "command": "systemctl poweroff"
+          }
+        ]
       }
     ],
     "center": [
