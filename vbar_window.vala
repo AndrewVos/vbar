@@ -15,7 +15,7 @@ public class VbarWindow : Gtk.ApplicationWindow {
     );
 
     var config = GLib.Environment.get_user_config_dir();
-    string config_path = config + "/vbar/config.json";
+    string config_path = config + "/vbar/vbar.json";
     if (!FileUtils.test(config_path, FileTest.EXISTS)) {
       Logger.error("Couldn't find config at \"" + config_path + "\"");
       this.application.quit();
