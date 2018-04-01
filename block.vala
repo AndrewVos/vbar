@@ -1,5 +1,5 @@
 class Block : Gtk.EventBox {
-  private string block_name;
+  public string block_name;
   private string block_text;
   private string block_command;
   private double block_interval;
@@ -57,19 +57,21 @@ class Block : Gtk.EventBox {
       });
     }
 
-    if (this.block_interval > 0 && this.block_command != null) {
-      this.start_updating();
+    if (this.block_command != null) {
+      this.update_label();
+
+      if (this.block_interval > 0) {
+        this.start_updating();
+      }
     }
   }
 
   private void start_updating() {
-    this.update_label();
-
     uint intervalMilliseconds = (uint)(this.block_interval * 1000);
     GLib.Timeout.add(intervalMilliseconds, () => { this.update_label(); return true; }, GLib.Priority.DEFAULT);
   }
 
-  private void update_label() {
+  public void update_label() {
     string text = Executor.execute(this.block_command);
     this.label.set_text(text);
   }

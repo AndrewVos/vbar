@@ -9,6 +9,7 @@ A lightweight bar written in Vala
 - Support for Font Awesome
 - Style anything in the panel with CSS
 - Update blocks with an interval
+- D-Bus integration to trigger block updates
 
 ## Screenshots
 
