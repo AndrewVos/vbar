@@ -17,6 +17,8 @@ A lightweight bar written in Vala
 
 ![screenshot of vbar with popup menu](https://raw.githubusercontent.com/AndrewVos/vbar/master/screenshots/popup.png)
 
+![screenshot of vbar with transparency](https://raw.githubusercontent.com/AndrewVos/vbar/master/screenshots/transparent.png)
+
 ## Installation
 
 ### Arch Linux
@@ -247,3 +249,9 @@ to a block named `wireless.
 
 Note that you can also do `menu :hover` to style the
 menu when it is selected.
+
+## Transparency
+
+It is possible to use `transparent` as a colour in css
+(maybe you want your wallpaper to shine through your bar).
+To do this you will need a compositor, for example `compton`.

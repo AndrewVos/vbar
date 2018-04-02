@@ -22,6 +22,8 @@ public class VbarWindow : Gtk.ApplicationWindow {
       return;
     }
 
+    this.enable_transparency();
+
     this.panel = new Panel(this.screen);
     try {
       this.panel.load_from_path(config_path);
@@ -66,5 +68,14 @@ public class VbarWindow : Gtk.ApplicationWindow {
 
     Gdk.property_change(this.get_window(), atom, Gdk.Atom.intern("CARDINAL", false),
     32, Gdk.PropMode.REPLACE, (uint8[])struts, 12);
+  }
+
+  private void enable_transparency() {
+    var screen = this.get_screen();
+    var visual = screen.get_rgba_visual();
+
+    if(visual != null && screen.is_composited()) {
+      this.set_visual(visual);
+    }
   }
 }
