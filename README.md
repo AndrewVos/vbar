@@ -96,6 +96,31 @@ percentage and displays it.
 }
 ```
 
+### Blocks with streaming commands
+
+You may want to use the output of a command that stays
+alive as block text. `vbar` can read each line output
+by a command and use that as the block text.
+
+You can do this with the `tail_command` key.
+
+Let's say you wanted to update battery usage every five
+seconds (a contrived example, I know). This is how
+you can do that:
+
+```json
+{
+  "blocks": {
+    "right": [
+      {
+        "name": "battery",
+        "tail_command": "while true; do acpi | cut -d, -f2 | sed 's/ //'; sleep 5; done"
+      }
+    ]
+  }
+}
+```
+
 ### Blocks with commands that update on a timer
 
 If you include a `command` and an `interval` key,

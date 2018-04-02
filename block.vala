@@ -2,6 +2,7 @@ class Block : Gtk.EventBox {
   public string block_name;
   private string block_text;
   private string block_command;
+  private string block_tail_command;
   private double block_interval;
 
   private Gtk.Label label;
@@ -17,6 +18,9 @@ class Block : Gtk.EventBox {
     }
     if (element.has_member("command")) {
       this.block_command = element.get_string_member("command");
+    }
+    if (element.has_member("tail_command")) {
+      this.block_tail_command = element.get_string_member("tail_command");
     }
     if (element.has_member("interval")) {
       this.block_interval = element.get_double_member("interval");
@@ -63,6 +67,12 @@ class Block : Gtk.EventBox {
       if (this.block_interval > 0) {
         this.start_updating();
       }
+    } else if (this.block_tail_command != null) {
+      var executor = new Executor();
+      executor.line.connect((line) => {
+        this.label.set_text(line);
+      });
+      executor.execute_async(this.block_tail_command);
     }
   }
 

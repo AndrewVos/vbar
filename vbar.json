@@ -84,8 +84,7 @@
       },
       {
         "name": "battery",
-        "command": "acpi | cut -d, -f2 | sed 's/ //'",
-        "interval": 1
+        "tail_command": "while true; do acpi | cut -d, -f2 | sed 's/ //'; sleep 5; done"
       },
       {
         "name": "wireless-icon",
