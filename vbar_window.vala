@@ -21,6 +21,14 @@ public class VbarWindow : Gtk.ApplicationWindow {
       this.application.quit();
       return;
     }
+    
+    // Enable transparency
+    var screen = this.get_screen();
+    var visual = screen.get_rgba_visual();
+
+    if(visual != null && screen.is_composited()) {
+      this.set_visual(visual);
+    }
 
     this.enable_transparency();
 
