@@ -15,9 +15,9 @@ class MessageServer : Object {
     }
   }
 
-  public signal bool update(string block_name);
-  public bool trigger_update(string block_name) {
-    return update(block_name);
+  public signal void update(string block_name);
+  public void trigger_update(string block_name) {
+    this.update(block_name);
   }
 
   public static bool send_update(string block_name) {
@@ -35,16 +35,17 @@ class MessageServer : Object {
     }
 
     try {
-      return message.trigger_update(block_name);
+      message.trigger_update(block_name);
     } catch {
       Logger.error("Couldn't send message to vbar. Is it running?");
       return false;
     }
+
+    return true;
   }
 }
 
 [DBus (name = "com.andrewvos.Vbar")]
 interface Message : Object {
-  public abstract bool trigger_update (string block_name) throws IOError;
+  public abstract void trigger_update (string block_name) throws IOError;
 }
-

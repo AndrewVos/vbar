@@ -31,7 +31,6 @@ public class VbarApplication : Gtk.Application {
       if (result) {
         return 0;
       }
-
       return 1;
     }
 

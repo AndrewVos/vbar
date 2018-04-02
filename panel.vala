@@ -16,10 +16,8 @@ class Panel : Gtk.Box {
         var block = this.blocks.get(block_name);
         if (block != null) {
           block.update_label();
-          return true;
         }
       }
-      return false;
     });
   }
 
