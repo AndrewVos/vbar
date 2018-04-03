@@ -15,9 +15,24 @@ class Executor {
     }
   }
 
+  public static void execute_async(string command) {
+    try {
+      Process.spawn_async_with_pipes(
+        null,
+        { "/bin/bash", "-c", command},
+        null,
+        SpawnFlags.SEARCH_PATH,
+        null,
+        null
+        );
+    } catch(Error e) {
+      Logger.error("Couldn't execute command.");
+    }
+  }
+
   public signal void line(string line);
 
-  public void execute_async(string command) {
+  public void execute_async_tail(string command) {
     Pid child_pid;
     int standard_output;
 

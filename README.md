@@ -9,7 +9,6 @@ A lightweight bar written in Vala
 - Support for Font Awesome
 - Style anything in the panel with CSS
 - Update blocks with an interval
-- D-Bus integration to trigger block updates
 
 ## Screenshots
 
@@ -31,175 +30,97 @@ It's probably best to start from the example configuration:
 
 ```
 mkdir -p ~/.config/vbar
-cp /usr/share/doc/vbar/examples/vbar.json ~/.config/vbar
+cp /usr/share/doc/vbar/examples/vbarrc ~/.config/vbar
 ```
 
-### Block alignment
+All configuration is done in the command line, which means
+that `vbar` is very hackable.
 
-Blocks can either be places in the `left`, `right`, or `center` of
-the bar.
+Your `vbarrc` will just be executed by `vbar` when it launches,
+to make things easier.
 
-For example, this config has one block in the center:
+### Adding a block
 
-```json
-{
-  "blocks": {
-    "left": [ ],
-    "center": [
-      {
-        "name": "title",
-        "command": "Wow I Love vbar"
-      }
-    ],
-    "right": [ ]
-  }
-}
+Blocks are added with the `add-block` command.
+
+For example:
+
+```bash
+vbar add-block --left --name my-block --text hello
 ```
 
-### Static blocks
+This will add the block named `my-block` with the text
+`hello`.
 
-For blocks that contain text that never change.
+#### Options
 
-For example, a battery icon:
+##### [--left|--center|--right]
 
-```json
-{
-  "blocks": {
-    "right": [
-      {
-        "name": "battery-icon",
-        "text": ""
-      }
-    ]
-  }
-}
-```
+Adds a block to the left/right/center of the panel.
 
-### Blocks with commands
+##### --name=STRING
 
-If you include a `command` key, it will be
-executed once when creating the block and
-the text that comes back from the command
-will be used as the block text.
+The name of the block.
 
-For example, here's a block that gets the battery
-percentage and displays it.
+##### --command=STRING
 
-```json
-{
-  "blocks": {
-    "right": [
-      {
-        "name": "battery",
-        "command": "acpi | cut -d, -f2 | sed 's/ //'"
-      }
-    ]
-  }
-}
-```
+Command will be executed once when creating the block
+and the text that comes back from the command will be
+used as the block text.
 
-### Blocks with streaming commands
+##### --tail-command=STRING
 
-You may want to use the output of a command that stays
-alive as block text. `vbar` can read each line output
-by a command and use that as the block text.
+Works just like command, but it doesn't wait for the
+command to finish executing. The command is expected
+to write lines to stdout every time you want the
+block text to change. Each line output from the
+command will be used as the new block text.
 
-You can do this with the `tail_command` key.
+##### --click-command=STRING
 
-Let's say you wanted to update battery usage every five
-seconds (a contrived example, I know). This is how
-you can do that:
+A command to execute when you click on the block.
 
-```json
-{
-  "blocks": {
-    "right": [
-      {
-        "name": "battery",
-        "tail_command": "while true; do acpi | cut -d, -f2 | sed 's/ //'; sleep 5; done"
-      }
-    ]
-  }
-}
-```
+##### --interval=DECIMAL
 
-### Blocks with commands that update on a timer
+Use this to cause `--command` to be executed every N
+seconds, for blocks that need to be updated on a
+schedule.
 
-If you include a `command` and an `interval` key,
-then the command will be executed on a timer and the
-text that comes back from the command will be used
-as the block text.
+### Adding a menu to a block
 
-For example, here's a block that gets the battery
-percentage and displays it every five seconds:
-
-```json
-{
-  "blocks": {
-    "right": [
-      {
-        "name": "battery",
-        "command": "acpi | cut -d, -f2 | sed 's/ //'",
-	"interval": 5
-      }
-    ]
-  }
-}
-```
-
-### Blocks with menu items
-
-Blocks can include `menu-items` key, which
-is an array of menu items to be displayed when
+Blocks can have drop down menus that pop up when
 the block is clicked.
 
-Each menu item can have `text` and `command`. The latter
-will be executed when you click on the menu item.
+Menus are added to blocks with the `add-menu` command.
 
 Here's an example power off icon that shows an option to
-Shut down when you click it.
+shut down when you click it.
 
-```json
-{
-  "blocks": {
-    "left": [
-      {
-        "name": "power-off-icon",
-        "text": "",
-        "menu-items": [
-          {
-            "text": "Shut down",
-            "command": "systemctl poweroff"
-          }
-        ]
-      }
-    ]
-  }
-}
+```bash
+vbar add-block --name power-off-icon --text "POWER"
+vbar add-menu --block power-off-icon --text "Shutdown" --command "systemctl poweroff"
 ```
 
-### Blocks that get updated after an event
+#### Options
 
-Blocks can be updated from external scripts using the update
-command in `vbar`:
+##### --text=STRING
 
-```
-vbar --update BLOCK_NAME
-```
+The menu text.
+
+##### --command=STRING
+
+Command that will be executed once when clicking the menu.
+
+### Updating a block
+
+External scripts can trigger a block update
+with the `add-block` command. This will
+cause the block the execute `command` as usual.
 
 For example, let's say we want a block that displays the currently active window title. First, we add the block:
 
-```json
-{
-  "blocks": {
-    "center": [
-      {
-        "name": "title",
-        "command": "xprop -id $(xprop -root _NET_ACTIVE_WINDOW | cut -d ' ' -f 5) WM_NAME | sed -e 's/.*\"\\(.*\\)\".*/\\1/'"
-      }
-    ]
-  }
-}
+```bash
+vbar add-block --name title --command "xprop -id $(xprop -root _NET_ACTIVE_WINDOW | cut -d ' ' -f 5) WM_NAME | sed -e 's/.*\"\\(.*\\)\".*/\\1/'"
 ```
 
 That command will be executed once, so our window title will only be the window that was active when `vbar` launched. Pretty useless.
@@ -208,47 +129,51 @@ To make the window title update as soon as you change windows, we can use `xprop
 
 Run the following on startup inside your window manager:
 
-```
-xprop -root -spy _NET_ACTIVE_WINDOW | while read -r LINE; do vbar --update title; done &
-```
-
-Where `title` is the name of the block you specified in `name`.
-
-## Styles
-
-Everything in `vbar` can be styled with css added directly to your
-configuration like so:
-
-```json
-{
-  "styles": {
-    "panel": [
-      "font-family: Hack;"
-    ],
-    "block": [
-      "padding-top: 5px;"
-    ],
-    "menu": [
-      "font-weight: normal;"
-    ],
-    "menu :hover": [
-      "background-color: #232936;",
-      "color: #9aa7bd;"
-    ],
-    "wireless": [
-      "margin-right: 10px;"
-    ]
-  }
-}
+```bash
+xprop -root -spy _NET_ACTIVE_WINDOW | while read -r LINE; do vbar update --block title; done &
 ```
 
-In the above code `panel` applies to the entire bar,
-`block` applies to all blocks, `menu` applies to any
-dropdown menu you may create, and `wireless` applies
-to a block named `wireless.
+### Adding custom styles
 
-Note that you can also do `menu :hover` to style the
-menu when it is selected.
+Everything in `vbar` can be styled with css.
+To do this, we use the `add-css` command.
+
+Styling the whole panel:
+
+```bash
+vbar add-css --class "panel" \
+       --css "font-family: Hack;" \
+       --css "color: blue;
+```
+
+Styling each block:
+
+```bash
+vbar add-css --class "block" \
+       --css "padding-top: 5px;" \
+       --css "padding-bottom: 5px;"
+```
+
+Styling the menu:
+
+```bash
+vbar add-css --class "menu" \
+       --css "background-color: green;"
+```
+
+Styling the menu on hover:
+
+```bash
+vbar add-css --class "menu :hover" \
+       --css "background-color: purple;"
+```
+
+Styling the block called `wireless`:
+
+```bash
+vbar add-css --class "wireless" \
+       --css "background-color: orange;"
+```
 
 ## Transparency
 
