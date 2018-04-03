@@ -33,11 +33,25 @@
       "font-family: \"Font Awesome\";",
       "background-color: #232936;"
     ],
+    "workspaces": [
+      "background-color: #1b202a;",
+      "letter-spacing: 10px;"
+    ],
+    "title": [
+      "background-color: #1b202a;"
+    ],
     "battery-icon": [
       "font-family: \"Font Awesome\";",
       "background-color: #232936;"
     ],
     "battery": [
+      "margin-right: 10px;"
+    ],
+    "volume-icon": [
+      "font-family: \"Font Awesome\";",
+      "background-color: #232936;"
+    ],
+    "volume": [
       "margin-right: 10px;"
     ],
     "wireless-icon": [
@@ -69,15 +83,28 @@
             "command": "systemctl poweroff"
           }
         ]
+      },
+      {
+        "name": "workspaces",
+        "command": "bspwm-workspaces"
       }
     ],
     "center": [
       {
         "name": "title",
-        "command": "xprop -id $(xprop -root _NET_ACTIVE_WINDOW | cut -d ' ' -f 5) WM_NAME | sed -e 's/.*\"\\(.*\\)\".*/\\1/'"
+        "tail_command": "xtitle -s"
       }
     ],
     "right": [
+      {
+        "name": "volume-icon",
+        "text": "",
+        "command": "volume icon"
+      },
+      {
+        "name": "volume",
+        "command": "volume percentage"
+      },
       {
         "name": "battery-icon",
         "text": ""
