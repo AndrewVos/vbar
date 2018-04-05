@@ -2,7 +2,7 @@ class Block : Gtk.EventBox {
   public string block_name;
   private AddBlockOptions options;
 
-  private Gtk.Label label;
+  public Gtk.Label label;
   public Gtk.Menu menu;
 
   public Block(AddBlockOptions options) {
@@ -12,7 +12,6 @@ class Block : Gtk.EventBox {
     this.block_name = options.name;
 
     this.label = new Gtk.Label(this.options.text);
-    this.label.ellipsize = Pango.EllipsizeMode.END;
     this.label.get_style_context().add_class("block");
     this.label.get_style_context().add_class(this.block_name);
     this.add(this.label);
