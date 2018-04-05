@@ -1,19 +1,45 @@
-class Panel : Gtk.Box {
-  public Gtk.Box container_left;
-  public Gtk.Box container_center;
-  public Gtk.Box container_right;
+class Panel : Gtk.Grid {
+  private Block last_left;
+  private Block last_center;
+  private Block last_right;
 
   public Panel() {
-    Object(orientation: Gtk.Orientation.HORIZONTAL, spacing: 0);
+    Object();
     this.get_style_context().add_class("panel");
+  }
 
-    this.container_left = new Gtk.Box(Gtk.Orientation.HORIZONTAL, 0);
-    this.pack_start(this.container_left);
+  public void add_left(Block block) {
+    block.halign = Gtk.Align.START;
 
-    this.container_center = new Gtk.Box(Gtk.Orientation.HORIZONTAL, 0);
-    this.pack_start(this.container_center, true, true);
+    this.attach_next_to(block, this.last_left, Gtk.PositionType.RIGHT);
+    this.last_left = block;
+  }
 
-    this.container_right = new Gtk.Box(Gtk.Orientation.HORIZONTAL, 0);
-    this.pack_end(this.container_right, false, true);
+  public void add_center(Block block) {
+    block.label.ellipsize = Pango.EllipsizeMode.END;
+    block.halign = Gtk.Align.CENTER;
+    block.hexpand = true;
+
+    if (this.last_center == null) {
+      this.attach_next_to(block, this.last_left, Gtk.PositionType.RIGHT);
+    } else {
+      this.attach_next_to(block, this.last_center, Gtk.PositionType.RIGHT);
+    }
+    this.last_center = block;
+  }
+
+  public void add_right(Block block) {
+    block.halign = Gtk.Align.END;
+
+    if (this.last_right == null) {
+      if (this.last_center == null) {
+        this.attach_next_to(block, this.last_left, Gtk.PositionType.RIGHT);
+      } else {
+        this.attach_next_to(block, this.last_center, Gtk.PositionType.RIGHT);
+      }
+    } else {
+      this.attach_next_to(block, this.last_right, Gtk.PositionType.RIGHT);
+    }
+    this.last_right = block;
   }
 }

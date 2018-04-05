@@ -50,11 +50,11 @@ public class VbarWindow : Gtk.ApplicationWindow {
       this.blocks += block;
 
       if (options.location == BlockLocation.LEFT) {
-        this.panel.container_left.add(block);
-      } else if (options.location == BlockLocation.RIGHT) {
-        this.panel.container_right.add(block);
+        this.panel.add_left(block);
       } else if (options.location == BlockLocation.CENTER) {
-        this.panel.container_center.add(block);
+        this.panel.add_center(block);
+      } else if (options.location == BlockLocation.RIGHT) {
+        this.panel.add_right(block);
       }
 
       this.update_dimensions();
