@@ -94,6 +94,34 @@ public class VbarWindow : Gtk.ApplicationWindow {
         }
       }
     });
+
+    this.message_server.hide.connect((block_names) => {
+      if (this.blocks != null) {
+        for (var i = 0; i < this.blocks.length; i++) {
+          var block = this.blocks[i];
+          for (var x = 0; x < block_names.length; x++) {
+            string block_name = block_names[x];
+            if (block.block_name == block_name) {
+              block.hide();
+            }
+          }
+        }
+      }
+    });
+
+    this.message_server.show.connect((block_names) => {
+      if (this.blocks != null) {
+        for (var i = 0; i < this.blocks.length; i++) {
+          var block = this.blocks[i];
+          for (var x = 0; x < block_names.length; x++) {
+            string block_name = block_names[x];
+            if (block.block_name == block_name) {
+              block.show();
+            }
+          }
+        }
+      }
+    });
   }
 
   private void create_panel() {

@@ -29,6 +29,12 @@ public class VbarApplication : Gtk.Application {
   private static string menu_text = null;
   private static string menu_command = null;
 
+  [CCode (array_length = false, array_null_terminated = true)]
+  private static string[]? hide_block_names = null;
+
+  [CCode (array_length = false, array_null_terminated = true)]
+  private static string[]? show_block_names = null;
+
   public static int main(string[] args) {
     GLib.Intl.setlocale();
 
@@ -52,6 +58,10 @@ public class VbarApplication : Gtk.Application {
       setup_add_menu_options(option_context);
     } else if (vbarCommand == "update") {
       setup_update_options(option_context);
+    } else if (vbarCommand == "hide") {
+      setup_hide_options(option_context);
+    } else if (vbarCommand == "show") {
+      setup_show_options(option_context);
     } else if (vbarCommand == null) {
       var application = new VbarApplication();
       return application.run(args);
@@ -75,6 +85,10 @@ public class VbarApplication : Gtk.Application {
       return add_menu(option_context);
     } else if (vbarCommand == "update") {
       return update(option_context);
+    } else if (vbarCommand == "hide") {
+      return hide(option_context);
+    } else if (vbarCommand == "show") {
+      return show(option_context);
     }
 
     return 1;
@@ -125,6 +139,24 @@ public class VbarApplication : Gtk.Application {
     };
 
     context.add_main_entries(options, "Update a block");
+  }
+
+  private static void setup_hide_options(OptionContext context) {
+    const GLib.OptionEntry[] options = {
+      { "block", 0, 0, OptionArg.STRING_ARRAY, ref hide_block_names, "Blocks to hide", "BLOCK_NAME..." },
+      { null }
+    };
+
+    context.add_main_entries(options, "Hide blocks");
+  }
+
+  private static void setup_show_options(OptionContext context) {
+    const GLib.OptionEntry[] options = {
+      { "block", 0, 0, OptionArg.STRING_ARRAY, ref show_block_names, "Blocks to show", "BLOCK_NAMES" },
+      { null }
+    };
+
+    context.add_main_entries(options, "Show blocks");
   }
 
   private static int add_css(OptionContext context) {
@@ -196,6 +228,32 @@ public class VbarApplication : Gtk.Application {
     }
 
     bool result = MessageServer.send_update(update_block_name);
+    if (result) {
+      return 0;
+    }
+    return 1;
+  }
+
+  private static int hide(OptionContext context) {
+    if (hide_block_names == null) {
+      Logger.put(context.get_help(true, null));
+      return 1;
+    }
+
+    bool result = MessageServer.send_hide(hide_block_names);
+    if (result) {
+      return 0;
+    }
+    return 1;
+  }
+
+  private static int show(OptionContext context) {
+    if (show_block_names == null) {
+      Logger.put(context.get_help(true, null));
+      return 1;
+    }
+
+    bool result = MessageServer.send_show(show_block_names);
     if (result) {
       return 0;
     }

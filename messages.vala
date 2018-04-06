@@ -50,6 +50,16 @@ class MessageServer : Object {
     this.update(block_name);
   }
 
+  public signal void hide(string[] block_names);
+  public void trigger_hide(string[] block_names) throws GLib.Error {
+    this.hide(block_names);
+  }
+
+  public signal void show(string[] block_names);
+  public void trigger_show(string[] block_names) throws GLib.Error {
+    this.show(block_names);
+  }
+
   public static bool send_add_css(string class_name, string[] css) {
     var message = get_proxy();
     if (message == null) {
@@ -117,6 +127,38 @@ class MessageServer : Object {
 
     return true;
   }
+
+  public static bool send_hide(string[] block_names) {
+    var message = get_proxy();
+    if (message == null) {
+      return false;
+    }
+
+    try {
+      message.trigger_hide(block_names);
+    } catch {
+      Logger.error("Couldn't send message to vbar. Is it running?");
+      return false;
+    }
+
+    return true;
+  }
+
+  public static bool send_show(string[] block_names) {
+    var message = get_proxy();
+    if (message == null) {
+      return false;
+    }
+
+    try {
+      message.trigger_show(block_names);
+    } catch {
+      Logger.error("Couldn't send message to vbar. Is it running?");
+      return false;
+    }
+
+    return true;
+  }
 }
 
 [DBus (name = "com.andrewvos.Vbar")]
@@ -125,4 +167,6 @@ interface Message : Object {
   public abstract void trigger_add_block(AddBlockOptions options) throws GLib.Error;
   public abstract void trigger_add_menu(AddMenuOptions options) throws GLib.Error;
   public abstract void trigger_update(string block_name) throws GLib.Error;
+  public abstract void trigger_hide(string[] block_names) throws GLib.Error;
+  public abstract void trigger_show(string[] block_names) throws GLib.Error;
 }
