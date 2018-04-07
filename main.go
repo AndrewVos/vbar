@@ -503,12 +503,12 @@ func addMenuHandler(w http.ResponseWriter, r *http.Request) {
 				if err != nil {
 					log.Fatal(err)
 				}
-
 				block.Menu = menu
+
 				applyClass(&block.Menu.Widget, "menu")
 
 				block.EventBox.Connect("button-release-event", func() {
-					menuPointer := unsafe.Pointer(menu.GObject)
+					menuPointer := unsafe.Pointer(block.Menu.GObject)
 					gtkMenu := C.toGtkMenu(menuPointer)
 
 					widgetPointer := unsafe.Pointer(block.EventBox.Widget.GObject)
@@ -522,25 +522,24 @@ func addMenuHandler(w http.ResponseWriter, r *http.Request) {
 						nil,
 					)
 				})
-
-				menuItem, err := gtk.MenuItemNewWithLabel(options.Text)
-				if err != nil {
-					log.Fatal(err)
-				}
-				menuItem.Connect("activate", func() {
-					cmd := exec.Command("/bin/bash", "-c", options.Command)
-					cmd.Stdout = os.Stdout
-					cmd.Stderr = os.Stderr
-
-					err = cmd.Run()
-					if err != nil {
-						log.Printf("Command finished with error: %v", err)
-					}
-				})
-				menu.Add(menuItem)
-				menu.ShowAll()
-
 			}
+
+			menuItem, err := gtk.MenuItemNewWithLabel(options.Text)
+			if err != nil {
+				log.Fatal(err)
+			}
+			menuItem.Connect("activate", func() {
+				cmd := exec.Command("/bin/bash", "-c", options.Command)
+				cmd.Stdout = os.Stdout
+				cmd.Stderr = os.Stderr
+
+				err = cmd.Run()
+				if err != nil {
+					log.Printf("Command finished with error: %v", err)
+				}
+			})
+			block.Menu.Add(menuItem)
+			block.Menu.ShowAll()
 		}
 	}
 
