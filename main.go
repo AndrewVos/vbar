@@ -134,7 +134,6 @@ func (bo blockOptions) updateLabelForever() {
 			bo.Label.SetText("ERROR")
 			return
 		}
-		log.Printf("Tailing %s\n", bo.Name)
 		err = cmd.Start()
 		if err != nil {
 			log.Printf("Command finished with error: %v", err)
@@ -222,9 +221,6 @@ func buildEventBox(options blockOptions) {
 	//TODO: click_command
 
 	if options.Command != "" {
-		fmt.Println(options.Name)
-		fmt.Println(options.Command)
-		fmt.Println(options.TailCommand)
 		if options.Name == "title" {
 			os.Exit(1)
 		}
@@ -240,7 +236,6 @@ func buildEventBox(options blockOptions) {
 			}()
 		}
 	} else if options.TailCommand != "" {
-		fmt.Println(options.Name)
 		options.updateLabelForever()
 	}
 }
@@ -510,6 +505,9 @@ func addBlockLeft(block *gtk.EventBox) {
 }
 
 func addBlockCenter(block *gtk.EventBox) {
+	block.SetHAlign(gtk.ALIGN_CENTER)
+	block.SetHExpand(true)
+
 	if lastCenterBlock != nil {
 		panel.AttachNextTo(block, lastCenterBlock, gtk.POS_RIGHT, 1, 1)
 	} else if lastLeftBlock != nil {
@@ -524,6 +522,8 @@ func addBlockCenter(block *gtk.EventBox) {
 }
 
 func addBlockRight(block *gtk.EventBox) {
+	block.SetHAlign(gtk.ALIGN_END)
+
 	if lastRightBlock != nil {
 		panel.AttachNextTo(block, lastRightBlock, gtk.POS_RIGHT, 1, 1)
 	} else if lastCenterBlock != nil {
