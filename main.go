@@ -11,8 +11,10 @@ static GtkWindow * toGtkWindow(void *p)
   return (GTK_WINDOW(p));
 }
 
-#include <gtk/gtk.h>
-#include <gdk/gdk.h>
+static GdkDisplay * toGdkDisplay(void *p)
+{
+	return (GDK_DISPLAY(p));
+}
 
 void set_strut_properties(GtkWindow *window,
 				long left, long right, long top, long bottom,
@@ -89,7 +91,7 @@ func main() {
 	case commandStart.FullCommand():
 		startVbar()
 	case commandAddCSS.FullCommand():
-		println(*flagAddCSSClass)
+		sendAddCSS()
 	case commandAddBlock.FullCommand():
 		sendAddBlock()
 	}
@@ -152,6 +154,45 @@ func (bo blockOptions) updateLabelForever() {
 	}()
 }
 
+func applyClass(widget *gtk.Widget, class string) {
+	styleContext, err := widget.GetStyleContext()
+	if err != nil {
+		log.Fatal(err)
+	}
+	styleContext.AddClass(class)
+}
+
+// Rectangle is just a rectangle.
+type Rectangle struct {
+	X      int
+	Y      int
+	Width  int
+	Height int
+}
+
+func getMonitorDimensions(window *gtk.Window) (Rectangle, error) {
+	screen, err := window.GetScreen()
+	if err != nil {
+		return Rectangle{}, err
+	}
+	display, err := screen.GetDisplay()
+	if err != nil {
+		return Rectangle{}, err
+	}
+
+	geometry := C.GdkRectangle{}
+	displayPointer := unsafe.Pointer(display.GObject)
+	gdkDisplay := C.toGdkDisplay(displayPointer)
+	monitor := C.gdk_display_get_primary_monitor(gdkDisplay)
+	C.gdk_monitor_get_geometry(monitor, &geometry)
+	return Rectangle{
+		X:      int(geometry.x),
+		Y:      int(geometry.y),
+		Width:  int(geometry.width),
+		Height: int(geometry.height),
+	}, nil
+}
+
 func buildEventBox(options blockOptions) {
 	eventBox, err := gtk.EventBoxNew()
 	if err != nil {
@@ -165,8 +206,10 @@ func buildEventBox(options blockOptions) {
 		log.Println(err)
 		return
 	}
-	eventBox.Add(label)
+	applyClass(&label.Widget, "block")
+	applyClass(&label.Widget, options.Name)
 	options.Label = label
+	eventBox.Add(label)
 
 	if options.Left {
 		addBlockLeft(eventBox)
@@ -177,8 +220,6 @@ func buildEventBox(options blockOptions) {
 	}
 
 	//TODO: click_command
-	//TODO: command
-	//TODO: tail_command
 
 	if options.Command != "" {
 		fmt.Println(options.Name)
@@ -206,6 +247,47 @@ func buildEventBox(options blockOptions) {
 
 type serverResult struct {
 	Success bool
+}
+
+type cssOptions struct {
+	Class string
+	Value string
+}
+
+func sendAddCSS() {
+	options := cssOptions{
+		Class: *flagAddCSSClass,
+		Value: *flagAddCSSValue,
+	}
+
+	jsonValue, err := json.Marshal(options)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	resp, err := http.Post(
+		"http://localhost:5643/add-css",
+		"application/json",
+		bytes.NewBuffer(jsonValue),
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var result serverResult
+	err = json.Unmarshal(body, &result)
+	if err != nil {
+		log.Fatal(err)
+	}
+	if result.Success == false {
+		log.Fatal("Command failed.")
+	}
 }
 
 func sendAddBlock() {
@@ -270,6 +352,57 @@ func addBlockHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, string(jsonValue))
 }
 
+func addCSSHandler(w http.ResponseWriter, r *http.Request) {
+	decoder := json.NewDecoder(r.Body)
+	var options cssOptions
+	err := decoder.Decode(&options)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer r.Body.Close()
+
+	cssAdder.Add(options)
+
+	result := serverResult{Success: true}
+	jsonValue, err := json.Marshal(result)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Fprintf(w, string(jsonValue))
+}
+
+var cssAdder CSSAdder
+
+// CSSAdder applies CSS to the bar.
+type CSSAdder struct {
+	Screen     *gdk.Screen
+	cssOptions []cssOptions
+	provider   *gtk.CssProvider
+}
+
+// Add applies CSS to the bar.
+func (ca *CSSAdder) Add(options cssOptions) {
+	ca.cssOptions = append(ca.cssOptions, options)
+
+	if ca.provider == nil {
+		provider, err := gtk.CssProviderNew()
+		if err != nil {
+			log.Fatal(err)
+		}
+		ca.provider = provider
+		gtk.AddProviderForScreen(ca.Screen, provider, 0)
+	}
+
+	css := ""
+	for _, options := range ca.cssOptions {
+		css += fmt.Sprintf(".%s { %s }\n", options.Class, options.Value)
+	}
+	err := ca.provider.LoadFromData(css)
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
 func startVbar() {
 	gtk.Init(nil)
 
@@ -281,6 +414,11 @@ func startVbar() {
 		log.Fatal("Unable to create window:", err)
 	}
 
+	monitorDimensions, err := getMonitorDimensions(window)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	window.SetAppPaintable(true)
 	window.SetDecorated(false)
 	window.SetResizable(false)
@@ -288,26 +426,30 @@ func startVbar() {
 	window.SetSkipTaskbarHint(true)
 	window.SetTypeHint(gdk.WINDOW_TYPE_HINT_DOCK)
 	window.SetVExpand(false)
+	window.SetPosition(gtk.WIN_POS_NONE)
+	window.Move(0, 0)
+	window.SetDefaultSize(monitorDimensions.Width, -1)
 
 	window.Connect("destroy", func() {
 		gtk.MainQuit()
 	})
 
+	screen, err := window.GetScreen()
+	if err != nil {
+		log.Fatal(err)
+	}
+	cssAdder = CSSAdder{
+		Screen: screen,
+	}
+
 	panel, err = gtk.GridNew()
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 	window.Add(panel)
+	applyClass(&panel.Widget, "panel")
 
 	//TODO: add transparency support
-
-	monitorX := 0
-	//TODO: get monitor dimensions
-	monitorWidth := 1920
-
-	window.Move(0, 0)
-	window.SetDefaultSize(monitorWidth, height)
-	window.SetPosition(gtk.WIN_POS_NONE)
 
 	window.ShowAll()
 
@@ -319,7 +461,7 @@ func startVbar() {
 		0, 0, C.long(height), 0, /* strut-left, strut-right, strut-top, strut-bottom */
 		0, 0, /* strut-left-start-y, strut-left-end-y */
 		0, 0, /* strut-right-start-y, strut-right-end-y */
-		C.long(monitorX), C.long(monitorX+monitorWidth-1), /* strut-top-start-x, strut-top-end-x */
+		C.long(monitorDimensions.X), C.long(monitorDimensions.X+monitorDimensions.Width-1), /* strut-top-start-x, strut-top-end-x */
 		0, 0, /* strut-bottom-start-x, strut-bottom-end-x */
 	)
 
@@ -341,6 +483,7 @@ func startVbar() {
 
 func listen() {
 	http.HandleFunc("/add-block", addBlockHandler)
+	http.HandleFunc("/add-css", addCSSHandler)
 	err := http.ListenAndServe(":5643", nil)
 	if err != nil {
 		log.Fatal(err)
