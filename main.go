@@ -169,6 +169,24 @@ type Rectangle struct {
 	Height int
 }
 
+func enableTransparency(window *gtk.Window) error {
+	screen, err := window.GetScreen()
+	if err != nil {
+		return err
+	}
+
+	visual, err := screen.GetRGBAVisual()
+	if err != nil {
+		return err
+	}
+
+	if visual != nil && screen.IsComposited() {
+		window.SetVisual(visual)
+	}
+
+	return nil
+}
+
 func getMonitorDimensions(window *gtk.Window) (Rectangle, error) {
 	screen, err := window.GetScreen()
 	if err != nil {
@@ -465,7 +483,7 @@ func startVbar() {
 	applyClass(&panel.Widget, "panel")
 	window.Add(panel)
 
-	//TODO: add transparency support
+	enableTransparency(window)
 
 	go listen()
 
