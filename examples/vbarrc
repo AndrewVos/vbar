@@ -1,92 +1,86 @@
 #!/bin/bash
 
 set -e
-set -x
 
-./vbar add-css --class panel \
-	--css "font-family: Hack;" \
-	--css "font-weight: normal;" \
-	--css "font-size: 20px;" \
-	--css "text-shadow: none;" \
-	--css "background-color: #1b202a;" \
-	--css "border: 10px solid #1b202a;"
+cd /home/andrewvos/code/vbar
+vbar="./vbar "
 
-./vbar add-css --class block \
-	--css "padding-top: 5px;" \
-	--css "padding-bottom: 5px;" \
-	--css "padding-left: 10px;"\
-	--css "padding-right: 10px;"\
-	--css "color: #9aa7bd;"\
-	--css "background-color: #323c4d;"
+$vbar add-css --class panel --css "font-family: Hack;"
+$vbar add-css --class panel --css "font-weight: normal;"
+$vbar add-css --class panel --css "font-size: 20px;"
+$vbar add-css --class panel --css "text-shadow: none;"
+$vbar add-css --class panel --css "background-color: #1b202a;"
+$vbar add-css --class panel --css "border: 10px solid #1b202a;"
 
-./vbar add-css --class menu \
-	--css "font-family: Hack;" \
-	--css "font-weight: normal;" \
-	--css "font-size: 20px;" \
-	--css "text-shadow: none;" \
-	--css "background-color: #323c4d;" \
-	--css "color: #9aa7bd;" \
-	--css "border: 10px solid #323c4d;"
+$vbar add-css --class block --css "padding-top: 5px;"
+$vbar add-css --class block --css "padding-bottom: 5px;"
+$vbar add-css --class block --css "padding-left: 10px;"
+$vbar add-css --class block --css "padding-right: 10px;"
+$vbar add-css --class block --css "color: #9aa7bd;"
+$vbar add-css --class block --css "background-color: #323c4d;"
 
-./vbar add-css --class "menu :hover" \
-	--css "background-color: #232936;" \
-	--css "color: #9aa7bd;"
+$vbar add-css --class menu --css "font-family: Hack;"
+$vbar add-css --class menu --css "font-weight: normal;"
+$vbar add-css --class menu --css "font-size: 20px;"
+$vbar add-css --class menu --css "text-shadow: none;"
+$vbar add-css --class menu --css "background-color: #323c4d;"
+$vbar add-css --class menu --css "color: #9aa7bd;"
+$vbar add-css --class menu --css "border: 10px solid #323c4d;"
 
-./vbar add-css --class power-off-icon \
-	--css "font-family: \"Font Awesome\";" \
-	--css "background-color: #232936;"
+$vbar add-css --class "menu :hover" --css "background-color: #232936;"
+$vbar add-css --class "menu :hover" --css "color: #9aa7bd;"
 
-./vbar add-css --class workspaces \
-	--css "background-color: #1b202a;" \
-	--css "letter-spacing: 10px;"
+$vbar add-css --class power-off-icon --css "font-family: \"Font Awesome\";"
+$vbar add-css --class power-off-icon --css "background-color: #232936;"
 
-./vbar add-css --class title \
-	--css "background-color: #1b202a;"
+$vbar add-css --class title --css "background-color: #1b202a;"
 
-./vbar add-css --class battery-icon \
-	--css "font-family: \"Font Awesome\";" \
-	--css "background-color: #232936;"
+$vbar add-css --class battery-icon --css "font-family: \"Font Awesome\";"
+$vbar add-css --class battery-icon --css "background-color: #232936;"
 
-./vbar add-css --class battery \
-	--css "margin-right: 10px;"
+$vbar add-css --class battery --css "margin-right: 10px;"
 
-./vbar add-css --class volume-icon \
-	--css "font-family: \"Font Awesome\";" \
-	--css "background-color: #232936;"
+$vbar add-css --class volume-icon --css "font-family: \"Font Awesome\";"
+$vbar add-css --class volume-icon --css "background-color: #232936;"
 
-./vbar add-css --class volume \
-	--css "margin-right: 10px;"
+$vbar add-css --class volume --css "margin-right: 10px;"
 
-./vbar add-css --class wireless-icon \
-	--css "font-family: \"Font Awesome\";" \
-	--css "background-color: #232936;"
+$vbar add-css --class wireless-icon --css "font-family: \"Font Awesome\";"
+$vbar add-css --class wireless-icon --css "background-color: #232936;"
 
-./vbar add-css --class wireless \
-	--css "margin-right: 10px;"
+$vbar add-css --class wireless --css "margin-right: 10px;"
 
-./vbar add-css --class date \
-	--css "margin-right: 10px;"
+$vbar add-css --class date --css "margin-right: 10px;"
 
-./vbar add-css --class time \
-	--css "margin-right: 0px;"
+$vbar add-css --class time --css "margin-right: 0px;"
 
-./vbar add-block --left --name power-off-icon --text ""
+$vbar add-block --left --name power-off-icon --text ""
 
-./vbar add-menu --block power-off-icon --text "Log off" --command "bspc quit"
-./vbar add-menu --block power-off-icon --text "Shut down" --command "systemctl poweroff"
+$vbar add-menu --name power-off-icon --text "Log off" --command "bspc quit"
+$vbar add-menu --name power-off-icon --text "Shut down" --command "systemctl poweroff"
 
-./vbar add-block --left --name workspaces --command "bspwm-workspaces"
+# for desktop in $(bspc query --desktops --names); do
+# 	vbar add-css --class "desktop-$desktop" \
+# 		--css "background-color: #1b202a;" \
+# 		--css "letter-spacing: 10px;"
+# 	vbar add-css --class "desktop-$desktop-active" \
+# 		--css "background-color: #1b202a;" \
+# 		--css "letter-spacing: 10px;"
+# 	vbar add-block --left --name "desktop-$desktop" --text ""
+# 	vbar add-block --left --name "desktop-$desktop-active" --text ""
+# done
 
-./vbar add-block --center --name title --tail-command "xtitle -s"
+$vbar add-block --center --name title --tail-command "xtitle -s"
 
-./vbar add-block --right --name volume-icon --command "volume icon"
-./vbar add-block --right --name volume --command "volume percentage"
+$vbar add-block --right --name volume-icon --command "volume icon" --click-command "amixer -q sset Master toggle && vbar update --name volume && vbar update --name volume-icon"
 
-./vbar add-block --right --name battery-icon --text ''
-./vbar add-block --right --name battery --tail-command "while true; do acpi | cut -d, -f2 | sed 's/ //'; sleep 5; done"
+$vbar add-block --right --name volume --command "volume percentage"
 
-./vbar add-block --right --name wireless-icon --text ""
-./vbar add-block --right --name wireless --command "netctl-auto list | grep '* ' | sed 's/* //'" --interval 5
+$vbar add-block --right --name battery-icon --text ''
+$vbar add-block --right --name battery --tail-command "while true; do acpi | cut -d, -f2 | sed 's/ //'; sleep 5; done"
 
-./vbar add-block --right --name date --command "date +%d/%m" --interval 60
-./vbar add-block --right --name time --command "date +%H:%M" --interval 1
+$vbar add-block --right --name wireless-icon --text ""
+$vbar add-block --right --name wireless --command "netctl-auto list | grep '* ' | sed 's/* //'" --interval 5
+
+$vbar add-block --right --name date --command "date +%d/%m" --interval 60
+$vbar add-block --right --name time --command "date +%H:%M" --interval 1
