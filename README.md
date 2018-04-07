@@ -101,7 +101,7 @@ shut down when you click it.
 
 ```bash
 vbar add-block --name power-off-icon --text "POWER"
-vbar add-menu --block power-off-icon --text "Shutdown" --command "systemctl poweroff"
+vbar add-menu --name power-off-icon --text "Shutdown" --command "systemctl poweroff"
 ```
 
 #### Options
@@ -117,7 +117,7 @@ Command that will be executed once when clicking the menu.
 ### Updating a block
 
 External scripts can trigger a block update
-with the `add-block` command. This will
+with the `update` command. This will
 cause the block the execute `command` as usual.
 
 For example, let's say we want a block that displays the currently active window title. First, we add the block:
@@ -133,7 +133,7 @@ To make the window title update as soon as you change windows, we can use `xprop
 Run the following on startup inside your window manager:
 
 ```bash
-xprop -root -spy _NET_ACTIVE_WINDOW | while read -r LINE; do vbar update --block title; done &
+xprop -root -spy _NET_ACTIVE_WINDOW | while read -r LINE; do vbar update --name title; done &
 ```
 
 ### Hiding or showing blocks
@@ -143,7 +143,7 @@ You can hide or show blocks using the `hide` and `show` commands.
 For example:
 
 ```bash
-vbar hide --block wireless --block battery
+vbar hide --name wireless --name battery
 ```
 
 ### Adding custom styles
@@ -154,38 +154,33 @@ To do this, we use the `add-css` command.
 Styling the whole panel:
 
 ```bash
-vbar add-css --class "panel" \
-       --css "font-family: Hack;" \
-       --css "color: blue;
+vbar add-css --class "panel" --css "font-family: Hack;"
+vbar add-css --class "panel" --css "color: blue;
 ```
 
 Styling each block:
 
 ```bash
-vbar add-css --class "block" \
-       --css "padding-top: 5px;" \
-       --css "padding-bottom: 5px;"
+vbar add-css --class "block" --css "padding-top: 5px;"
+vbar add-css --class "block" --css "padding-bottom: 5px;"
 ```
 
 Styling the menu:
 
 ```bash
-vbar add-css --class "menu" \
-       --css "background-color: green;"
+vbar add-css --class "menu" --css "background-color: green;"
 ```
 
 Styling the menu on hover:
 
 ```bash
-vbar add-css --class "menu :hover" \
-       --css "background-color: purple;"
+vbar add-css --class "menu :hover" --css "background-color: purple;"
 ```
 
 Styling the block called `wireless`:
 
 ```bash
-vbar add-css --class "wireless" \
-       --css "background-color: orange;"
+vbar add-css --class "wireless" --css "background-color: orange;"
 ```
 
 ## Transparency
