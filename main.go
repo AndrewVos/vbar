@@ -82,6 +82,9 @@ var (
 	flagAddBlockTailCommand = commandAddBlock.Flag("tail-command", "Command to tail.").String()
 	flagAddBlockInterval    = commandAddBlock.Flag("interval", "Interval in seconds to execute command.").Int()
 
+	commandUpdate       = app.Command("update", "Trigger a block update.")
+	flagUpdateBlockName = commandUpdate.Flag("name", "Block name.").Required().String()
+
 	window *gtk.Window
 	panel  *gtk.Grid
 )
@@ -94,6 +97,8 @@ func main() {
 		sendAddCSS()
 	case commandAddBlock.FullCommand():
 		sendAddBlock()
+	case commandUpdate.FullCommand():
+		sendUpdate()
 	}
 }
 
@@ -108,6 +113,10 @@ type blockOptions struct {
 	Command     string
 	TailCommand string
 	Interval    int
+}
+
+type updateOptions struct {
+	Name string
 }
 
 func (bo blockOptions) updateLabel() {
@@ -210,7 +219,11 @@ func getMonitorDimensions(window *gtk.Window) (Rectangle, error) {
 	}, nil
 }
 
-func buildEventBox(options blockOptions) {
+var blocks []*blockOptions
+
+func buildEventBox(options *blockOptions) {
+	blocks = append(blocks, options)
+
 	eventBox, err := gtk.EventBoxNew()
 	if err != nil {
 		log.Println(err)
@@ -344,6 +357,41 @@ func sendAddBlock() {
 	}
 }
 
+func sendUpdate() {
+	options := updateOptions{
+		Name: *flagUpdateBlockName,
+	}
+
+	jsonValue, err := json.Marshal(options)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	resp, err := http.Post(
+		"http://localhost:5643/update",
+		"application/json",
+		bytes.NewBuffer(jsonValue),
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var result serverResult
+	err = json.Unmarshal(body, &result)
+	if err != nil {
+		log.Fatal(err)
+	}
+	if result.Success == false {
+		log.Fatal("Command failed.")
+	}
+}
+
 func addBlockHandler(w http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(r.Body)
 	var options blockOptions
@@ -353,7 +401,7 @@ func addBlockHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	defer r.Body.Close()
 
-	buildEventBox(options)
+	buildEventBox(&options)
 
 	window.ShowAll()
 
@@ -375,6 +423,30 @@ func addCSSHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
 	cssAdder.Add(options)
+
+	result := serverResult{Success: true}
+	jsonValue, err := json.Marshal(result)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Fprintf(w, string(jsonValue))
+}
+
+func updateHandler(w http.ResponseWriter, r *http.Request) {
+	decoder := json.NewDecoder(r.Body)
+	var options updateOptions
+	err := decoder.Decode(&options)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer r.Body.Close()
+
+	for _, block := range blocks {
+		if block.Name == options.Name {
+			block.updateLabel()
+			break
+		}
+	}
 
 	result := serverResult{Success: true}
 	jsonValue, err := json.Marshal(result)
@@ -503,6 +575,7 @@ func startVbar() {
 func listen() {
 	http.HandleFunc("/add-block", addBlockHandler)
 	http.HandleFunc("/add-css", addCSSHandler)
+	http.HandleFunc("/update", updateHandler)
 	err := http.ListenAndServe(":5643", nil)
 	if err != nil {
 		log.Fatal(err)
