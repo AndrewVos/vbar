@@ -42,51 +42,240 @@ void set_strut_properties(GtkWindow *window,
 import "C"
 
 import (
+	"bytes"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io/ioutil"
 	"log"
+	"net/http"
+	"os"
+	"os/exec"
+	"time"
 	"unsafe"
 
 	"github.com/gotk3/gotk3/gdk"
 	"github.com/gotk3/gotk3/gtk"
+	"gopkg.in/alecthomas/kingpin.v2"
+)
+
+var (
+	app = kingpin.New("vbar", "A bar.")
+
+	commandStart = app.Command("start", "Start vbar.")
+
+	commandAddCSS   = app.Command("add-css", "Add CSS.")
+	flagAddCSSClass = commandAddCSS.Flag("class", "CSS Class name.").Required().String()
+	flagAddCSSValue = commandAddCSS.Flag("css", "CSS value.").Required().String()
+
+	commandAddBlock         = app.Command("add-block", "Add a new block.")
+	flagAddBlockName        = commandAddBlock.Flag("name", "Block name.").Required().String()
+	flagAddBlockLeft        = commandAddBlock.Flag("left", "Add block to the left.").Bool()
+	flagAddBlockCenter      = commandAddBlock.Flag("center", "Add block to the center.").Bool()
+	flagAddBlockRight       = commandAddBlock.Flag("right", "Add block to the right.").Bool()
+	flagAddBlockText        = commandAddBlock.Flag("text", "Block text.").String()
+	flagAddBlockCommand     = commandAddBlock.Flag("command", "Command to execute.").String()
+	flagAddBlockTailCommand = commandAddBlock.Flag("tail-command", "Command to tail.").String()
+	flagAddBlockInterval    = commandAddBlock.Flag("interval", "Interval in seconds to execute command.").Int()
+
+	window *gtk.Window
+	panel  *gtk.Grid
 )
 
 func main() {
+	switch kingpin.MustParse(app.Parse(os.Args[1:])) {
+	case commandStart.FullCommand():
+		startVbar()
+	case commandAddCSS.FullCommand():
+		println(*flagAddCSSClass)
+	case commandAddBlock.FullCommand():
+		sendAddBlock()
+	}
+}
+
+type blockOptions struct {
+	EventBox    *gtk.EventBox
+	Label       *gtk.Label
+	Name        string
+	Text        string
+	Left        bool
+	Center      bool
+	Right       bool
+	Command     *string
+	TailCommand string
+	Interval    *int
+}
+
+func (bo blockOptions) updateLabel() {
+	cmd := exec.Command("/bin/bash", "-c", *bo.Command)
+	cmd.Stderr = os.Stderr
+
+	log.Printf("Updating %s\n", bo.Name)
+	stdout, err := cmd.Output()
+	if err == nil {
+		bo.Label.SetText(string(stdout))
+	} else {
+		log.Printf("Command finished with error: %v", err)
+		bo.Label.SetText("ERROR")
+	}
+}
+
+func buildEventBox(options blockOptions) {
+	eventBox, err := gtk.EventBoxNew()
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	options.EventBox = eventBox
+
+	label, err := gtk.LabelNew(options.Text)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	eventBox.Add(label)
+	options.Label = label
+
+	if options.Left {
+		addBlockLeft(eventBox)
+	} else if options.Center {
+		addBlockCenter(eventBox)
+	} else if options.Right {
+		addBlockRight(eventBox)
+	}
+
+	//TODO: click_command
+	//TODO: command
+	//TODO: tail_command
+
+	if options.Command != nil {
+		options.updateLabel()
+
+		if options.Interval != nil {
+			duration, _ := time.ParseDuration(fmt.Sprintf("%ds", *options.Interval))
+			tick := time.Tick(duration)
+			go func() {
+				for range tick {
+					log.Printf("Updating %s\n", options.Name)
+				}
+			}()
+		}
+	}
+}
+
+type serverResult struct {
+	Success bool
+}
+
+func sendAddBlock() {
+	options := blockOptions{
+		Name:        *flagAddBlockName,
+		Text:        *flagAddBlockText,
+		Left:        *flagAddBlockLeft,
+		Center:      *flagAddBlockCenter,
+		Right:       *flagAddBlockRight,
+		Command:     flagAddBlockCommand,
+		TailCommand: *flagAddBlockTailCommand,
+		Interval:    flagAddBlockInterval,
+	}
+	jsonValue, err := json.Marshal(options)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	log.Println("POSTING: " + string(jsonValue))
+	resp, err := http.Post(
+		"http://localhost:5643/add-block",
+		"application/json",
+		bytes.NewBuffer(jsonValue),
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var result serverResult
+	err = json.Unmarshal(body, &result)
+	if err != nil {
+		log.Fatal(err)
+	}
+	if result.Success == false {
+		log.Fatal("Command failed.")
+	}
+}
+
+func addBlockHandler(w http.ResponseWriter, r *http.Request) {
+	log.Println(r.URL.Path)
+
+	decoder := json.NewDecoder(r.Body)
+	var options blockOptions
+	err := decoder.Decode(&options)
+	if err != nil {
+		log.Println("chdsicsdc")
+		log.Fatal(err)
+	}
+	defer r.Body.Close()
+
+	buildEventBox(options)
+
+	window.ShowAll()
+	fmt.Printf("%+v\n", options)
+
+	result := serverResult{Success: true}
+	jsonValue, err := json.Marshal(result)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Fprintf(w, string(jsonValue))
+}
+
+func startVbar() {
 	gtk.Init(nil)
 
 	height := 50
 
-	win, err := gtk.WindowNew(gtk.WINDOW_TOPLEVEL)
+	err := errors.New("Hi")
+	window, err = gtk.WindowNew(gtk.WINDOW_TOPLEVEL)
 	if err != nil {
 		log.Fatal("Unable to create window:", err)
 	}
 
-	win.SetAppPaintable(true)
-	win.SetDecorated(false)
-	win.SetResizable(false)
-	win.SetSkipPagerHint(true)
-	win.SetSkipTaskbarHint(true)
-	win.SetTypeHint(gdk.WINDOW_TYPE_HINT_DOCK)
-	win.SetVExpand(false)
+	window.SetAppPaintable(true)
+	window.SetDecorated(false)
+	window.SetResizable(false)
+	window.SetSkipPagerHint(true)
+	window.SetSkipTaskbarHint(true)
+	window.SetTypeHint(gdk.WINDOW_TYPE_HINT_DOCK)
+	window.SetVExpand(false)
 
-	win.Connect("destroy", func() {
+	window.Connect("destroy", func() {
 		gtk.MainQuit()
 	})
 
-	l, err := gtk.LabelNew("Hello, gotk3!")
+	panel, err = gtk.GridNew()
 	if err != nil {
-		log.Fatal("Unable to create label:", err)
+		panic(err)
 	}
-	win.Add(l)
+	window.Add(panel)
 
-	win.Move(0, 0)
-	win.SetDefaultSize(400, height)
-	win.SetPosition(gtk.WIN_POS_NONE)
-
-	win.ShowAll()
+	//TODO: add transparency support
 
 	monitorX := 0
+	//TODO: get monitor dimensions
 	monitorWidth := 1920
 
-	p := unsafe.Pointer(win.GObject)
+	window.Move(0, 0)
+	window.SetDefaultSize(monitorWidth, height)
+	window.SetPosition(gtk.WIN_POS_NONE)
+
+	window.ShowAll()
+
+	p := unsafe.Pointer(window.GObject)
 	w := C.toGtkWindow(p)
 
 	C.set_strut_properties(
@@ -98,5 +287,72 @@ func main() {
 		0, 0, /* strut-bottom-start-x, strut-bottom-end-x */
 	)
 
+	go listen()
+
+	cmd := exec.Command("/bin/bash", "-c", "/home/andrewvos/.config/vbar/vbarrc")
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	log.Printf("Running command and waiting for it to finish...")
+	err = cmd.Run()
+	if err != nil {
+		log.Printf("Command finished with error: %v", err)
+	}
+
 	gtk.Main()
+
+}
+
+func listen() {
+	http.HandleFunc("/add-block", addBlockHandler)
+	err := http.ListenAndServe(":5643", nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+var lastLeftBlock *gtk.EventBox
+var lastCenterBlock *gtk.EventBox
+var lastRightBlock *gtk.EventBox
+
+func addBlockLeft(block *gtk.EventBox) {
+	block.SetHAlign(gtk.ALIGN_START)
+
+	if lastLeftBlock != nil {
+		panel.AttachNextTo(block, lastLeftBlock, gtk.POS_RIGHT, 1, 1)
+	} else if lastCenterBlock != nil {
+		panel.AttachNextTo(block, lastCenterBlock, gtk.POS_LEFT, 1, 1)
+	} else if lastRightBlock != nil {
+		panel.AttachNextTo(block, lastRightBlock, gtk.POS_LEFT, 1, 1)
+	} else {
+		panel.Attach(block, 0, 0, 1, 1)
+	}
+	lastLeftBlock = block
+}
+
+func addBlockCenter(block *gtk.EventBox) {
+	if lastCenterBlock != nil {
+		panel.AttachNextTo(block, lastCenterBlock, gtk.POS_RIGHT, 1, 1)
+	} else if lastLeftBlock != nil {
+		panel.AttachNextTo(block, lastLeftBlock, gtk.POS_RIGHT, 1, 1)
+	} else if lastRightBlock != nil {
+		panel.AttachNextTo(block, lastRightBlock, gtk.POS_LEFT, 1, 1)
+	} else {
+		panel.Attach(block, 0, 0, 1, 1)
+	}
+	lastCenterBlock = block
+
+}
+
+func addBlockRight(block *gtk.EventBox) {
+	if lastRightBlock != nil {
+		panel.AttachNextTo(block, lastRightBlock, gtk.POS_RIGHT, 1, 1)
+	} else if lastCenterBlock != nil {
+		panel.AttachNextTo(block, lastCenterBlock, gtk.POS_RIGHT, 1, 1)
+	} else if lastLeftBlock != nil {
+		panel.AttachNextTo(block, lastLeftBlock, gtk.POS_RIGHT, 1, 1)
+	} else {
+		panel.Attach(block, 0, 0, 1, 1)
+	}
+	lastRightBlock = block
 }
