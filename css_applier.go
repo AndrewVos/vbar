@@ -8,15 +8,15 @@ import (
 	"github.com/gotk3/gotk3/gtk"
 )
 
-// CSSApplier applies CSS to the bar.
+// CSSApplier applies CSS to a gtk.Window.
 type CSSApplier struct {
 	Screen     *gdk.Screen
 	cssOptions []cssOptions
 	provider   *gtk.CssProvider
 }
 
-// Add applies CSS to the bar.
-func (ca *CSSApplier) Add(options cssOptions) {
+// Apply CSS to a gtk.Window.
+func (ca *CSSApplier) Apply(options cssOptions) {
 	ca.cssOptions = append(ca.cssOptions, options)
 
 	if ca.provider == nil {

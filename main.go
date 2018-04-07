@@ -373,7 +373,7 @@ func addCSSHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	defer r.Body.Close()
 
-	cssApplier.Add(options)
+	cssApplier.Apply(options)
 
 	result := serverResult{Success: true}
 	jsonValue, err := json.Marshal(result)
