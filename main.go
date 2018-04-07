@@ -11,6 +11,16 @@ static GtkWindow * toGtkWindow(void *p)
   return (GTK_WINDOW(p));
 }
 
+static GtkWidget * toGtkWidget(void *p)
+{
+  return (GTK_WIDGET(p));
+}
+
+static GtkMenu * toGtkMenu(void *p)
+{
+  return (GTK_MENU(p));
+}
+
 static GdkDisplay * toGdkDisplay(void *p)
 {
 	return (GDK_DISPLAY(p));
@@ -82,6 +92,11 @@ var (
 	flagAddBlockTailCommand = commandAddBlock.Flag("tail-command", "Command to tail.").String()
 	flagAddBlockInterval    = commandAddBlock.Flag("interval", "Interval in seconds to execute command.").Int()
 
+	commandAddMenu       = app.Command("add-menu", "Add a menu to a block.")
+	flagAddMenuBlockName = commandAddMenu.Flag("name", "Block name.").Required().String()
+	flagAddMenuText      = commandAddMenu.Flag("text", "Menu text.").Required().String()
+	flagAddMenuCommand   = commandAddMenu.Flag("command", "Command to execute when activating the menu.").Required().String()
+
 	commandUpdate       = app.Command("update", "Trigger a block update.")
 	flagUpdateBlockName = commandUpdate.Flag("name", "Block name.").Required().String()
 
@@ -97,6 +112,8 @@ func main() {
 		sendAddCSS()
 	case commandAddBlock.FullCommand():
 		sendAddBlock()
+	case commandAddMenu.FullCommand():
+		sendAddMenu()
 	case commandUpdate.FullCommand():
 		sendUpdate()
 	}
@@ -105,6 +122,7 @@ func main() {
 type blockOptions struct {
 	EventBox    *gtk.EventBox
 	Label       *gtk.Label
+	Menu        *gtk.Menu
 	Name        string
 	Text        string
 	Left        bool
@@ -357,6 +375,48 @@ func sendAddBlock() {
 	}
 }
 
+type menuOptions struct {
+	Name    string
+	Text    string
+	Command string
+}
+
+func sendAddMenu() {
+	options := menuOptions{
+		Name:    *flagAddMenuBlockName,
+		Text:    *flagAddMenuText,
+		Command: *flagAddMenuCommand,
+	}
+	jsonValue, err := json.Marshal(options)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	resp, err := http.Post(
+		"http://localhost:5643/add-menu",
+		"application/json",
+		bytes.NewBuffer(jsonValue),
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var result serverResult
+	err = json.Unmarshal(body, &result)
+	if err != nil {
+		log.Fatal(err)
+	}
+	if result.Success == false {
+		log.Fatal("Command failed.")
+	}
+}
+
 func sendUpdate() {
 	options := updateOptions{
 		Name: *flagUpdateBlockName,
@@ -404,6 +464,71 @@ func addBlockHandler(w http.ResponseWriter, r *http.Request) {
 	buildEventBox(&options)
 
 	window.ShowAll()
+
+	result := serverResult{Success: true}
+	jsonValue, err := json.Marshal(result)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Fprintf(w, string(jsonValue))
+}
+
+func addMenuHandler(w http.ResponseWriter, r *http.Request) {
+	decoder := json.NewDecoder(r.Body)
+	var options menuOptions
+	err := decoder.Decode(&options)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer r.Body.Close()
+
+	for _, block := range blocks {
+		if block.Name == options.Name {
+			if block.Menu == nil {
+				menu, err := gtk.MenuNew()
+				if err != nil {
+					log.Fatal(err)
+				}
+
+				block.Menu = menu
+				applyClass(&block.Menu.Widget, "menu")
+
+				block.EventBox.Connect("button-release-event", func() {
+					menuPointer := unsafe.Pointer(menu.GObject)
+					gtkMenu := C.toGtkMenu(menuPointer)
+
+					widgetPointer := unsafe.Pointer(block.EventBox.Widget.GObject)
+					gtkWidget := C.toGtkWidget(widgetPointer)
+
+					C.gtk_menu_popup_at_widget(
+						gtkMenu,
+						gtkWidget,
+						C.GDK_GRAVITY_SOUTH_WEST,
+						C.GDK_GRAVITY_NORTH_WEST,
+						nil,
+					)
+				})
+
+				menuItem, err := gtk.MenuItemNewWithLabel(options.Text)
+				if err != nil {
+					log.Fatal(err)
+				}
+				menuItem.Connect("activate", func() {
+					cmd := exec.Command("/bin/bash", "-c", options.Command)
+					cmd.Stdout = os.Stdout
+					cmd.Stderr = os.Stderr
+
+					err = cmd.Run()
+					if err != nil {
+						log.Printf("Command finished with error: %v", err)
+					}
+				})
+				menu.Add(menuItem)
+				menu.ShowAll()
+
+			}
+		}
+	}
 
 	result := serverResult{Success: true}
 	jsonValue, err := json.Marshal(result)
@@ -574,6 +699,7 @@ func startVbar() {
 
 func listen() {
 	http.HandleFunc("/add-block", addBlockHandler)
+	http.HandleFunc("/add-menu", addMenuHandler)
 	http.HandleFunc("/add-css", addCSSHandler)
 	http.HandleFunc("/update", updateHandler)
 	err := http.ListenAndServe(":5643", nil)
