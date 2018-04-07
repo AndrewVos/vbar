@@ -42,6 +42,7 @@ void set_strut_properties(GtkWindow *window,
 import "C"
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/json"
 	"errors"
@@ -51,6 +52,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"strings"
 	"time"
 	"unsafe"
 
@@ -101,23 +103,53 @@ type blockOptions struct {
 	Left        bool
 	Center      bool
 	Right       bool
-	Command     *string
+	Command     string
 	TailCommand string
-	Interval    *int
+	Interval    int
 }
 
 func (bo blockOptions) updateLabel() {
-	cmd := exec.Command("/bin/bash", "-c", *bo.Command)
+	cmd := exec.Command("/bin/bash", "-c", bo.Command)
 	cmd.Stderr = os.Stderr
 
-	log.Printf("Updating %s\n", bo.Name)
 	stdout, err := cmd.Output()
 	if err == nil {
-		bo.Label.SetText(string(stdout))
+		bo.Label.SetText(strings.TrimSpace(string(stdout)))
 	} else {
 		log.Printf("Command finished with error: %v", err)
 		bo.Label.SetText("ERROR")
 	}
+}
+
+func (bo blockOptions) updateLabelForever() {
+	go func() {
+		cmd := exec.Command("/bin/bash", "-c", bo.TailCommand)
+		cmd.Stderr = os.Stderr
+
+		stdout, err := cmd.StdoutPipe()
+		if err != nil {
+			log.Printf("Couldn't get a stdout from command: %v", err)
+			bo.Label.SetText("ERROR")
+			return
+		}
+		log.Printf("Tailing %s\n", bo.Name)
+		err = cmd.Start()
+		if err != nil {
+			log.Printf("Command finished with error: %v", err)
+			bo.Label.SetText("ERROR")
+			return
+		}
+
+		scanner := bufio.NewScanner(stdout)
+		for scanner.Scan() {
+			bo.Label.SetText(strings.TrimSpace(scanner.Text()))
+		}
+		if err := scanner.Err(); err != nil {
+			log.Printf("Couldn't read from command stdout: %v", err)
+			bo.Label.SetText("ERROR")
+			return
+		}
+	}()
 }
 
 func buildEventBox(options blockOptions) {
@@ -148,18 +180,27 @@ func buildEventBox(options blockOptions) {
 	//TODO: command
 	//TODO: tail_command
 
-	if options.Command != nil {
+	if options.Command != "" {
+		fmt.Println(options.Name)
+		fmt.Println(options.Command)
+		fmt.Println(options.TailCommand)
+		if options.Name == "title" {
+			os.Exit(1)
+		}
 		options.updateLabel()
 
-		if options.Interval != nil {
-			duration, _ := time.ParseDuration(fmt.Sprintf("%ds", *options.Interval))
+		if options.Interval != 0 {
+			duration, _ := time.ParseDuration(fmt.Sprintf("%ds", options.Interval))
 			tick := time.Tick(duration)
 			go func() {
 				for range tick {
-					log.Printf("Updating %s\n", options.Name)
+					options.updateLabel()
 				}
 			}()
 		}
+	} else if options.TailCommand != "" {
+		fmt.Println(options.Name)
+		options.updateLabelForever()
 	}
 }
 
@@ -174,16 +215,15 @@ func sendAddBlock() {
 		Left:        *flagAddBlockLeft,
 		Center:      *flagAddBlockCenter,
 		Right:       *flagAddBlockRight,
-		Command:     flagAddBlockCommand,
+		Command:     *flagAddBlockCommand,
 		TailCommand: *flagAddBlockTailCommand,
-		Interval:    flagAddBlockInterval,
+		Interval:    *flagAddBlockInterval,
 	}
 	jsonValue, err := json.Marshal(options)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	log.Println("POSTING: " + string(jsonValue))
 	resp, err := http.Post(
 		"http://localhost:5643/add-block",
 		"application/json",
@@ -210,13 +250,10 @@ func sendAddBlock() {
 }
 
 func addBlockHandler(w http.ResponseWriter, r *http.Request) {
-	log.Println(r.URL.Path)
-
 	decoder := json.NewDecoder(r.Body)
 	var options blockOptions
 	err := decoder.Decode(&options)
 	if err != nil {
-		log.Println("chdsicsdc")
 		log.Fatal(err)
 	}
 	defer r.Body.Close()
@@ -224,7 +261,6 @@ func addBlockHandler(w http.ResponseWriter, r *http.Request) {
 	buildEventBox(options)
 
 	window.ShowAll()
-	fmt.Printf("%+v\n", options)
 
 	result := serverResult{Success: true}
 	jsonValue, err := json.Marshal(result)
