@@ -82,15 +82,16 @@ var (
 	flagAddCSSClass = commandAddCSS.Flag("class", "CSS Class name.").Required().String()
 	flagAddCSSValue = commandAddCSS.Flag("css", "CSS value.").Required().String()
 
-	commandAddBlock         = app.Command("add-block", "Add a new block.")
-	flagAddBlockName        = commandAddBlock.Flag("name", "Block name.").Required().String()
-	flagAddBlockLeft        = commandAddBlock.Flag("left", "Add block to the left.").Bool()
-	flagAddBlockCenter      = commandAddBlock.Flag("center", "Add block to the center.").Bool()
-	flagAddBlockRight       = commandAddBlock.Flag("right", "Add block to the right.").Bool()
-	flagAddBlockText        = commandAddBlock.Flag("text", "Block text.").String()
-	flagAddBlockCommand     = commandAddBlock.Flag("command", "Command to execute.").String()
-	flagAddBlockTailCommand = commandAddBlock.Flag("tail-command", "Command to tail.").String()
-	flagAddBlockInterval    = commandAddBlock.Flag("interval", "Interval in seconds to execute command.").Int()
+	commandAddBlock          = app.Command("add-block", "Add a new block.")
+	flagAddBlockName         = commandAddBlock.Flag("name", "Block name.").Required().String()
+	flagAddBlockLeft         = commandAddBlock.Flag("left", "Add block to the left.").Bool()
+	flagAddBlockCenter       = commandAddBlock.Flag("center", "Add block to the center.").Bool()
+	flagAddBlockRight        = commandAddBlock.Flag("right", "Add block to the right.").Bool()
+	flagAddBlockText         = commandAddBlock.Flag("text", "Block text.").String()
+	flagAddBlockCommand      = commandAddBlock.Flag("command", "Command to execute.").String()
+	flagAddBlockTailCommand  = commandAddBlock.Flag("tail-command", "Command to tail.").String()
+	flagAddBlockInterval     = commandAddBlock.Flag("interval", "Interval in seconds to execute command.").Int()
+	flagAddBlockClickCommand = commandAddBlock.Flag("click-command", "Command to execute when clicking on the block.").String()
 
 	commandAddMenu       = app.Command("add-menu", "Add a menu to a block.")
 	flagAddMenuBlockName = commandAddMenu.Flag("name", "Block name.").Required().String()
@@ -120,17 +121,18 @@ func main() {
 }
 
 type blockOptions struct {
-	EventBox    *gtk.EventBox
-	Label       *gtk.Label
-	Menu        *gtk.Menu
-	Name        string
-	Text        string
-	Left        bool
-	Center      bool
-	Right       bool
-	Command     string
-	TailCommand string
-	Interval    int
+	EventBox     *gtk.EventBox
+	Label        *gtk.Label
+	Menu         *gtk.Menu
+	Name         string
+	Text         string
+	Left         bool
+	Center       bool
+	Right        bool
+	Command      string
+	TailCommand  string
+	Interval     int
+	ClickCommand string
 }
 
 type updateOptions struct {
@@ -267,8 +269,6 @@ func buildEventBox(options *blockOptions) {
 		addBlockRight(eventBox)
 	}
 
-	//TODO: click_command
-
 	if options.Command != "" {
 		if options.Name == "title" {
 			os.Exit(1)
@@ -286,6 +286,19 @@ func buildEventBox(options *blockOptions) {
 		}
 	} else if options.TailCommand != "" {
 		options.updateLabelForever()
+	}
+
+	if options.ClickCommand != "" {
+		options.EventBox.Connect("button-release-event", func() {
+			cmd := exec.Command("/bin/bash", "-c", options.ClickCommand)
+			cmd.Stdout = os.Stdout
+			cmd.Stderr = os.Stderr
+
+			err = cmd.Run()
+			if err != nil {
+				log.Printf("Command finished with error: %v", err)
+			}
+		})
 	}
 }
 
@@ -336,14 +349,15 @@ func sendAddCSS() {
 
 func sendAddBlock() {
 	options := blockOptions{
-		Name:        *flagAddBlockName,
-		Text:        *flagAddBlockText,
-		Left:        *flagAddBlockLeft,
-		Center:      *flagAddBlockCenter,
-		Right:       *flagAddBlockRight,
-		Command:     *flagAddBlockCommand,
-		TailCommand: *flagAddBlockTailCommand,
-		Interval:    *flagAddBlockInterval,
+		Name:         *flagAddBlockName,
+		Text:         *flagAddBlockText,
+		Left:         *flagAddBlockLeft,
+		Center:       *flagAddBlockCenter,
+		Right:        *flagAddBlockRight,
+		Command:      *flagAddBlockCommand,
+		TailCommand:  *flagAddBlockTailCommand,
+		Interval:     *flagAddBlockInterval,
+		ClickCommand: *flagAddBlockClickCommand,
 	}
 	jsonValue, err := json.Marshal(options)
 	if err != nil {
