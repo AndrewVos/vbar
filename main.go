@@ -398,20 +398,37 @@ func (ca *CSSAdder) Add(options cssOptions) {
 	}
 }
 
+func updateDimensions() error {
+	window.ShowAll()
+
+	monitorDimensions, err := getMonitorDimensions(window)
+	if err != nil {
+		return err
+	}
+
+	window.SetSizeRequest(monitorDimensions.Width, -1)
+
+	p := unsafe.Pointer(window.GObject)
+	w := C.toGtkWindow(p)
+
+	C.set_strut_properties(
+		w,
+		0, 0, C.long(panel.GetAllocatedHeight()), 0, /* strut-left, strut-right, strut-top, strut-bottom */
+		0, 0, /* strut-left-start-y, strut-left-end-y */
+		0, 0, /* strut-right-start-y, strut-right-end-y */
+		C.long(monitorDimensions.X), C.long(monitorDimensions.X+monitorDimensions.Width-1), /* strut-top-start-x, strut-top-end-x */
+		0, 0, /* strut-bottom-start-x, strut-bottom-end-x */
+	)
+	return nil
+}
+
 func startVbar() {
 	gtk.Init(nil)
-
-	height := 50
 
 	err := errors.New("Hi")
 	window, err = gtk.WindowNew(gtk.WINDOW_TOPLEVEL)
 	if err != nil {
 		log.Fatal("Unable to create window:", err)
-	}
-
-	monitorDimensions, err := getMonitorDimensions(window)
-	if err != nil {
-		log.Fatal(err)
 	}
 
 	window.SetAppPaintable(true)
@@ -423,10 +440,14 @@ func startVbar() {
 	window.SetVExpand(false)
 	window.SetPosition(gtk.WIN_POS_NONE)
 	window.Move(0, 0)
-	window.SetDefaultSize(monitorDimensions.Width, -1)
+	window.SetSizeRequest(-1, -1)
 
 	window.Connect("destroy", func() {
 		gtk.MainQuit()
+	})
+
+	window.Connect("realize", func() {
+		updateDimensions()
 	})
 
 	screen, err := window.GetScreen()
@@ -441,24 +462,10 @@ func startVbar() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	window.Add(panel)
 	applyClass(&panel.Widget, "panel")
+	window.Add(panel)
 
 	//TODO: add transparency support
-
-	window.ShowAll()
-
-	p := unsafe.Pointer(window.GObject)
-	w := C.toGtkWindow(p)
-
-	C.set_strut_properties(
-		w,
-		0, 0, C.long(height), 0, /* strut-left, strut-right, strut-top, strut-bottom */
-		0, 0, /* strut-left-start-y, strut-left-end-y */
-		0, 0, /* strut-right-start-y, strut-right-end-y */
-		C.long(monitorDimensions.X), C.long(monitorDimensions.X+monitorDimensions.Width-1), /* strut-top-start-x, strut-top-end-x */
-		0, 0, /* strut-bottom-start-x, strut-bottom-end-x */
-	)
 
 	go listen()
 
@@ -466,7 +473,6 @@ func startVbar() {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
-	log.Printf("Running command and waiting for it to finish...")
 	err = cmd.Run()
 	if err != nil {
 		log.Printf("Command finished with error: %v", err)
