@@ -1,6 +1,6 @@
 # vbar
 
-A lightweight bar written in Vala
+A lightweight bar written in golang
 
 ***`vbar` is very new, and we're looking for help working out new features.***
 ***If you're using `vbar`, please let us know if anything is broken, or you need a new feature, by creating an issue.***
