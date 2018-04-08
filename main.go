@@ -10,8 +10,10 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"path"
 	"strings"
 
+	"github.com/cep21/xdgbasedir"
 	"github.com/gotk3/gotk3/gtk"
 	"gopkg.in/alecthomas/kingpin.v2"
 )
@@ -390,21 +392,31 @@ func startVbar() {
 	window = w
 
 	go listenForCommands()
-	executeConfig()
+	err = executeConfig()
+	if err != nil {
+		log.Println(err)
+	}
 
 	gtk.Main()
 }
 
-func executeConfig() {
-	cmd := exec.Command("/bin/bash", "-c", "/home/andrewvos/.config/vbar/vbarrc")
+func executeConfig() error {
+	configurationDirectory, err := xdgbasedir.ConfigHomeDirectory()
+	if err != nil {
+		return err
+	}
+	configurationFilePath := path.Join(configurationDirectory, "vbar", "vbarrc")
+
+	cmd := exec.Command("/bin/bash", "-c", configurationFilePath)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
-	err := cmd.Run()
+	err = cmd.Run()
 	if err != nil {
-		log.Printf("Command finished with error: %v", err)
+		return err
 	}
 
+	return nil
 }
 
 func listenForCommands() {
