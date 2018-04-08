@@ -20,7 +20,7 @@ type Window struct {
 	lastLeftBlock   *gtk.EventBox
 	lastCenterBlock *gtk.EventBox
 	lastRightBlock  *gtk.EventBox
-	blocks          []*blockOptions
+	blocks          []*Block
 	cssApplier      *CSSApplier
 }
 
@@ -68,54 +68,54 @@ func WindowNew() (*Window, error) {
 	return window, nil
 }
 
-func (w *Window) addBlock(options *blockOptions) error {
-	w.blocks = append(w.blocks, options)
+func (w *Window) addBlock(block *Block) error {
+	w.blocks = append(w.blocks, block)
 
 	eventBox, err := gtk.EventBoxNew()
 	if err != nil {
 		return err
 	}
-	options.EventBox = eventBox
+	block.EventBox = eventBox
 
-	label, err := gtk.LabelNew(options.Text)
+	label, err := gtk.LabelNew(block.Text)
 	if err != nil {
 		return err
 	}
 	applyClass(&label.Widget, "block")
-	applyClass(&label.Widget, options.Name)
-	options.Label = label
+	applyClass(&label.Widget, block.Name)
+	block.Label = label
 	eventBox.Add(label)
 
-	if options.Left {
+	if block.Left {
 		w.addBlockLeft(eventBox)
-	} else if options.Center {
+	} else if block.Center {
 		w.addBlockCenter(eventBox)
-	} else if options.Right {
+	} else if block.Right {
 		w.addBlockRight(eventBox)
 	}
 
-	if options.Command != "" {
-		if options.Name == "title" {
+	if block.Command != "" {
+		if block.Name == "title" {
 			os.Exit(1)
 		}
-		options.updateLabel()
+		block.updateLabel()
 
-		if options.Interval != 0 {
-			duration, _ := time.ParseDuration(fmt.Sprintf("%ds", options.Interval))
+		if block.Interval != 0 {
+			duration, _ := time.ParseDuration(fmt.Sprintf("%ds", block.Interval))
 			tick := time.Tick(duration)
 			go func() {
 				for range tick {
-					options.updateLabel()
+					block.updateLabel()
 				}
 			}()
 		}
-	} else if options.TailCommand != "" {
-		options.updateLabelForever()
+	} else if block.TailCommand != "" {
+		block.updateLabelForever()
 	}
 
-	if options.ClickCommand != "" {
-		options.EventBox.Connect("button-release-event", func() {
-			cmd := exec.Command("/bin/bash", "-c", options.ClickCommand)
+	if block.ClickCommand != "" {
+		block.EventBox.Connect("button-release-event", func() {
+			cmd := exec.Command("/bin/bash", "-c", block.ClickCommand)
 			cmd.Stdout = os.Stdout
 			cmd.Stderr = os.Stderr
 

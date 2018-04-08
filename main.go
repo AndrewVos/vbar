@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"bytes"
 	"encoding/json"
 	"fmt"
@@ -11,7 +10,6 @@ import (
 	"os"
 	"os/exec"
 	"path"
-	"strings"
 
 	"github.com/cep21/xdgbasedir"
 	"github.com/gotk3/gotk3/gtk"
@@ -52,7 +50,7 @@ var (
 func main() {
 	switch kingpin.MustParse(app.Parse(os.Args[1:])) {
 	case commandStart.FullCommand():
-		startVbar()
+		launch()
 	case commandAddCSS.FullCommand():
 		sendAddCSS()
 	case commandAddBlock.FullCommand():
@@ -64,66 +62,56 @@ func main() {
 	}
 }
 
-type blockOptions struct {
-	EventBox     *gtk.EventBox
-	Label        *gtk.Label
-	Menu         *gtk.Menu
-	Name         string
-	Text         string
-	Left         bool
-	Center       bool
-	Right        bool
-	Command      string
-	TailCommand  string
-	Interval     int
-	ClickCommand string
+func launch() {
+	gtk.Init(nil)
+
+	w, err := WindowNew()
+	if err != nil {
+		log.Fatal(err)
+	}
+	window = w
+
+	go listenForCommands()
+	err = executeConfig()
+	if err != nil {
+		log.Println(err)
+	}
+
+	gtk.Main()
+}
+
+func executeConfig() error {
+	configurationDirectory, err := xdgbasedir.ConfigHomeDirectory()
+	if err != nil {
+		return err
+	}
+	configurationFilePath := path.Join(configurationDirectory, "vbar", "vbarrc")
+
+	cmd := exec.Command("/bin/bash", "-c", configurationFilePath)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	err = cmd.Run()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func listenForCommands() {
+	http.HandleFunc("/add-block", addBlockHandler)
+	http.HandleFunc("/add-menu", addMenuHandler)
+	http.HandleFunc("/add-css", addCSSHandler)
+	http.HandleFunc("/update", updateHandler)
+	err := http.ListenAndServe(":5643", nil)
+	if err != nil {
+		log.Fatal(err)
+	}
 }
 
 type updateOptions struct {
 	Name string
-}
-
-func (bo blockOptions) updateLabel() {
-	cmd := exec.Command("/bin/bash", "-c", bo.Command)
-	cmd.Stderr = os.Stderr
-
-	stdout, err := cmd.Output()
-	if err == nil {
-		bo.Label.SetText(strings.TrimSpace(string(stdout)))
-	} else {
-		log.Printf("Command finished with error: %v", err)
-		bo.Label.SetText("ERROR")
-	}
-}
-
-func (bo blockOptions) updateLabelForever() {
-	go func() {
-		cmd := exec.Command("/bin/bash", "-c", bo.TailCommand)
-		cmd.Stderr = os.Stderr
-
-		stdout, err := cmd.StdoutPipe()
-		if err != nil {
-			log.Printf("Couldn't get a stdout from command: %v", err)
-			bo.Label.SetText("ERROR")
-			return
-		}
-		err = cmd.Start()
-		if err != nil {
-			log.Printf("Command finished with error: %v", err)
-			bo.Label.SetText("ERROR")
-			return
-		}
-
-		scanner := bufio.NewScanner(stdout)
-		for scanner.Scan() {
-			bo.Label.SetText(strings.TrimSpace(scanner.Text()))
-		}
-		if err := scanner.Err(); err != nil {
-			log.Printf("Couldn't read from command stdout: %v", err)
-			bo.Label.SetText("ERROR")
-			return
-		}
-	}()
 }
 
 func applyClass(widget *gtk.Widget, class string) {
@@ -192,7 +180,7 @@ func sendAddCSS() {
 }
 
 func sendAddBlock() {
-	options := blockOptions{
+	options := Block{
 		Name:         *flagAddBlockName,
 		Text:         *flagAddBlockText,
 		Left:         *flagAddBlockLeft,
@@ -288,14 +276,14 @@ func sendUpdate() {
 
 func addBlockHandler(w http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(r.Body)
-	var options blockOptions
-	err := decoder.Decode(&options)
+	var block Block
+	err := decoder.Decode(&block)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer r.Body.Close()
 
-	err = window.addBlock(&options)
+	err = window.addBlock(&block)
 	if err != nil {
 		fmt.Fprintf(w, dumpHandlerResult(false))
 		return
@@ -380,52 +368,4 @@ func updateHandler(w http.ResponseWriter, r *http.Request) {
 	window.updateBlock(options)
 
 	fmt.Fprintf(w, dumpHandlerResult(true))
-}
-
-func startVbar() {
-	gtk.Init(nil)
-
-	w, err := WindowNew()
-	if err != nil {
-		log.Fatal(err)
-	}
-	window = w
-
-	go listenForCommands()
-	err = executeConfig()
-	if err != nil {
-		log.Println(err)
-	}
-
-	gtk.Main()
-}
-
-func executeConfig() error {
-	configurationDirectory, err := xdgbasedir.ConfigHomeDirectory()
-	if err != nil {
-		return err
-	}
-	configurationFilePath := path.Join(configurationDirectory, "vbar", "vbarrc")
-
-	cmd := exec.Command("/bin/bash", "-c", configurationFilePath)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-
-	err = cmd.Run()
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func listenForCommands() {
-	http.HandleFunc("/add-block", addBlockHandler)
-	http.HandleFunc("/add-menu", addMenuHandler)
-	http.HandleFunc("/add-css", addCSSHandler)
-	http.HandleFunc("/update", updateHandler)
-	err := http.ListenAndServe(":5643", nil)
-	if err != nil {
-		log.Fatal(err)
-	}
 }
