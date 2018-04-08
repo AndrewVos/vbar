@@ -58,6 +58,14 @@ import (
 	"github.com/gotk3/gotk3/gtk"
 )
 
+// Rectangle is just a rectangle.
+type Rectangle struct {
+	X      int
+	Y      int
+	Width  int
+	Height int
+}
+
 func getMonitorDimensions(window *gtk.Window) (Rectangle, error) {
 	screen, err := window.GetScreen()
 	if err != nil {

@@ -122,14 +122,6 @@ func applyClass(widget *gtk.Widget, class string) {
 	styleContext.AddClass(class)
 }
 
-// Rectangle is just a rectangle.
-type Rectangle struct {
-	X      int
-	Y      int
-	Width  int
-	Height int
-}
-
 func enableTransparency(window *gtk.Window) error {
 	screen, err := window.GetScreen()
 	if err != nil {
