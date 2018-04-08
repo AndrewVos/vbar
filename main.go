@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"sync"
 
 	"github.com/cep21/xdgbasedir"
 	"github.com/gotk3/gotk3/gtk"
@@ -45,6 +46,7 @@ var (
 	flagUpdateBlockName = commandUpdate.Flag("name", "Block name.").Required().String()
 
 	window *Window
+	mutex  = &sync.Mutex{}
 )
 
 func main() {
@@ -226,6 +228,9 @@ func sendUpdate() {
 }
 
 func addCSSHandler(w http.ResponseWriter, r *http.Request) {
+	mutex.Lock()
+	defer mutex.Unlock()
+
 	decoder := json.NewDecoder(r.Body)
 	var addCSS AddCSS
 	err := decoder.Decode(&addCSS)
@@ -240,6 +245,9 @@ func addCSSHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func addBlockHandler(w http.ResponseWriter, r *http.Request) {
+	mutex.Lock()
+	defer mutex.Unlock()
+
 	decoder := json.NewDecoder(r.Body)
 	var block Block
 	err := decoder.Decode(&block)
@@ -258,6 +266,9 @@ func addBlockHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func addMenuHandler(w http.ResponseWriter, r *http.Request) {
+	mutex.Lock()
+	defer mutex.Unlock()
+
 	decoder := json.NewDecoder(r.Body)
 	var addMenu AddMenu
 	err := decoder.Decode(&addMenu)
@@ -276,6 +287,9 @@ func addMenuHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func updateHandler(w http.ResponseWriter, r *http.Request) {
+	mutex.Lock()
+	defer mutex.Unlock()
+
 	decoder := json.NewDecoder(r.Body)
 	var update Update
 	err := decoder.Decode(&update)

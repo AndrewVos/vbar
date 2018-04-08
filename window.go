@@ -3,6 +3,7 @@ package main
 import "C"
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -188,13 +189,15 @@ func (w *Window) addMenu(addMenu AddMenu) error {
 	return nil
 }
 
-func (w *Window) updateBlock(update Update) {
+func (w *Window) updateBlock(update Update) error {
 	for _, block := range w.blocks {
 		if block.Name == update.Name {
 			block.updateLabel()
-			break
+			return nil
 		}
 	}
+
+	return errors.New("Couldn't find block named " + update.Name + ".")
 }
 
 func (w *Window) addBlockLeft(block *gtk.EventBox) {

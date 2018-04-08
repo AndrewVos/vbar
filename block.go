@@ -26,7 +26,7 @@ type Block struct {
 	ClickCommand string
 }
 
-func (b Block) updateLabel() {
+func (b *Block) updateLabel() {
 	cmd := exec.Command("/bin/bash", "-c", b.Command)
 	cmd.Stderr = os.Stderr
 
@@ -39,7 +39,7 @@ func (b Block) updateLabel() {
 	}
 }
 
-func (b Block) updateLabelForever() {
+func (b *Block) updateLabelForever() {
 	go func() {
 		cmd := exec.Command("/bin/bash", "-c", b.TailCommand)
 		cmd.Stderr = os.Stderr
