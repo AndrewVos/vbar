@@ -53,6 +53,7 @@ void set_strut_properties(GtkWindow *window,
 */
 import "C"
 import (
+	"log"
 	"unsafe"
 
 	"github.com/gotk3/gotk3/gtk"
@@ -125,4 +126,30 @@ func popupMenuAt(widget *gtk.Widget, menu *gtk.Menu) {
 		C.GDK_GRAVITY_NORTH_WEST,
 		nil,
 	)
+}
+
+func enableTransparency(window *gtk.Window) error {
+	screen, err := window.GetScreen()
+	if err != nil {
+		return err
+	}
+
+	visual, err := screen.GetRGBAVisual()
+	if err != nil {
+		return err
+	}
+
+	if visual != nil && screen.IsComposited() {
+		window.SetVisual(visual)
+	}
+
+	return nil
+}
+
+func applyClass(widget *gtk.Widget, class string) {
+	styleContext, err := widget.GetStyleContext()
+	if err != nil {
+		log.Fatal(err)
+	}
+	styleContext.AddClass(class)
 }

@@ -100,9 +100,9 @@ func executeConfig() error {
 }
 
 func listenForCommands() {
+	http.HandleFunc("/add-css", addCSSHandler)
 	http.HandleFunc("/add-block", addBlockHandler)
 	http.HandleFunc("/add-menu", addMenuHandler)
-	http.HandleFunc("/add-css", addCSSHandler)
 	http.HandleFunc("/update", updateHandler)
 	err := http.ListenAndServe(":5643", nil)
 	if err != nil {
@@ -110,48 +110,13 @@ func listenForCommands() {
 	}
 }
 
-type updateOptions struct {
-	Name string
-}
-
-func applyClass(widget *gtk.Widget, class string) {
-	styleContext, err := widget.GetStyleContext()
-	if err != nil {
-		log.Fatal(err)
-	}
-	styleContext.AddClass(class)
-}
-
-func enableTransparency(window *gtk.Window) error {
-	screen, err := window.GetScreen()
-	if err != nil {
-		return err
-	}
-
-	visual, err := screen.GetRGBAVisual()
-	if err != nil {
-		return err
-	}
-
-	if visual != nil && screen.IsComposited() {
-		window.SetVisual(visual)
-	}
-
-	return nil
-}
-
-type cssOptions struct {
-	Class string
-	Value string
-}
-
 func sendAddCSS() {
-	options := cssOptions{
+	addCSS := AddCSS{
 		Class: *flagAddCSSClass,
 		Value: *flagAddCSSValue,
 	}
 
-	jsonValue, err := json.Marshal(options)
+	jsonValue, err := json.Marshal(addCSS)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -172,7 +137,7 @@ func sendAddCSS() {
 }
 
 func sendAddBlock() {
-	options := Block{
+	block := Block{
 		Name:         *flagAddBlockName,
 		Text:         *flagAddBlockText,
 		Left:         *flagAddBlockLeft,
@@ -183,7 +148,7 @@ func sendAddBlock() {
 		Interval:     *flagAddBlockInterval,
 		ClickCommand: *flagAddBlockClickCommand,
 	}
-	jsonValue, err := json.Marshal(options)
+	jsonValue, err := json.Marshal(block)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -205,19 +170,13 @@ func sendAddBlock() {
 	}
 }
 
-type menuOptions struct {
-	Name    string
-	Text    string
-	Command string
-}
-
 func sendAddMenu() {
-	options := menuOptions{
+	addMenu := AddMenu{
 		Name:    *flagAddMenuBlockName,
 		Text:    *flagAddMenuText,
 		Command: *flagAddMenuCommand,
 	}
-	jsonValue, err := json.Marshal(options)
+	jsonValue, err := json.Marshal(addMenu)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -240,11 +199,11 @@ func sendAddMenu() {
 }
 
 func sendUpdate() {
-	options := updateOptions{
+	update := Update{
 		Name: *flagUpdateBlockName,
 	}
 
-	jsonValue, err := json.Marshal(options)
+	jsonValue, err := json.Marshal(update)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -264,6 +223,20 @@ func sendUpdate() {
 	} else if result.Success == false {
 		log.Fatal("Command failed.")
 	}
+}
+
+func addCSSHandler(w http.ResponseWriter, r *http.Request) {
+	decoder := json.NewDecoder(r.Body)
+	var addCSS AddCSS
+	err := decoder.Decode(&addCSS)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer r.Body.Close()
+
+	window.applyCSS(addCSS)
+
+	fmt.Fprintf(w, dumpHandlerResult(true))
 }
 
 func addBlockHandler(w http.ResponseWriter, r *http.Request) {
@@ -286,18 +259,32 @@ func addBlockHandler(w http.ResponseWriter, r *http.Request) {
 
 func addMenuHandler(w http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(r.Body)
-	var options menuOptions
-	err := decoder.Decode(&options)
+	var addMenu AddMenu
+	err := decoder.Decode(&addMenu)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer r.Body.Close()
 
-	err = window.addMenu(options)
+	err = window.addMenu(addMenu)
 	if err != nil {
 		fmt.Fprintf(w, dumpHandlerResult(false))
 		return
 	}
+
+	fmt.Fprintf(w, dumpHandlerResult(true))
+}
+
+func updateHandler(w http.ResponseWriter, r *http.Request) {
+	decoder := json.NewDecoder(r.Body)
+	var update Update
+	err := decoder.Decode(&update)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer r.Body.Close()
+
+	window.updateBlock(update)
 
 	fmt.Fprintf(w, dumpHandlerResult(true))
 }
@@ -332,32 +319,4 @@ func dumpHandlerResult(success bool) string {
 		log.Fatal(err)
 	}
 	return string(jsonValue)
-}
-
-func addCSSHandler(w http.ResponseWriter, r *http.Request) {
-	decoder := json.NewDecoder(r.Body)
-	var options cssOptions
-	err := decoder.Decode(&options)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer r.Body.Close()
-
-	window.applyCSS(options)
-
-	fmt.Fprintf(w, dumpHandlerResult(true))
-}
-
-func updateHandler(w http.ResponseWriter, r *http.Request) {
-	decoder := json.NewDecoder(r.Body)
-	var options updateOptions
-	err := decoder.Decode(&options)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer r.Body.Close()
-
-	window.updateBlock(options)
-
-	fmt.Fprintf(w, dumpHandlerResult(true))
 }

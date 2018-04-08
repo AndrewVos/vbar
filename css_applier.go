@@ -9,13 +9,13 @@ import (
 
 // CSSApplier applies CSS to a gtk.Window.
 type CSSApplier struct {
-	cssOptions []cssOptions
-	provider   *gtk.CssProvider
+	addCSS   []AddCSS
+	provider *gtk.CssProvider
 }
 
 // Apply CSS to a gtk.Window.
-func (ca *CSSApplier) Apply(screen *gdk.Screen, options cssOptions) error {
-	ca.cssOptions = append(ca.cssOptions, options)
+func (ca *CSSApplier) Apply(screen *gdk.Screen, addCSS AddCSS) error {
+	ca.addCSS = append(ca.addCSS, addCSS)
 
 	if ca.provider == nil {
 		provider, err := gtk.CssProviderNew()
@@ -27,8 +27,8 @@ func (ca *CSSApplier) Apply(screen *gdk.Screen, options cssOptions) error {
 	}
 
 	css := ""
-	for _, options := range ca.cssOptions {
-		css += fmt.Sprintf(".%s { %s }\n", options.Class, options.Value)
+	for _, addCSS := range ca.addCSS {
+		css += fmt.Sprintf(".%s { %s }\n", addCSS.Class, addCSS.Value)
 	}
 	err := ca.provider.LoadFromData(css)
 	if err != nil {

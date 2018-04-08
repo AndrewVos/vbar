@@ -131,7 +131,7 @@ func (w *Window) addBlock(block *Block) error {
 	return nil
 }
 
-func (w *Window) applyCSS(options cssOptions) error {
+func (w *Window) applyCSS(addCSS AddCSS) error {
 	if w.cssApplier == nil {
 		w.cssApplier = &CSSApplier{}
 	}
@@ -141,7 +141,7 @@ func (w *Window) applyCSS(options cssOptions) error {
 		return err
 	}
 
-	err = w.cssApplier.Apply(screen, options)
+	err = w.cssApplier.Apply(screen, addCSS)
 	if err != nil {
 		return err
 	}
@@ -149,9 +149,9 @@ func (w *Window) applyCSS(options cssOptions) error {
 	return nil
 }
 
-func (w *Window) addMenu(options menuOptions) error {
+func (w *Window) addMenu(addMenu AddMenu) error {
 	for _, block := range w.blocks {
-		if block.Name == options.Name {
+		if block.Name == addMenu.Name {
 			if block.Menu == nil {
 				menu, err := gtk.MenuNew()
 				if err != nil {
@@ -166,12 +166,12 @@ func (w *Window) addMenu(options menuOptions) error {
 				})
 			}
 
-			menuItem, err := gtk.MenuItemNewWithLabel(options.Text)
+			menuItem, err := gtk.MenuItemNewWithLabel(addMenu.Text)
 			if err != nil {
 				log.Fatal(err)
 			}
 			menuItem.Connect("activate", func() {
-				cmd := exec.Command("/bin/bash", "-c", options.Command)
+				cmd := exec.Command("/bin/bash", "-c", addMenu.Command)
 				cmd.Stdout = os.Stdout
 				cmd.Stderr = os.Stderr
 
@@ -188,9 +188,9 @@ func (w *Window) addMenu(options menuOptions) error {
 	return nil
 }
 
-func (w *Window) updateBlock(options updateOptions) {
+func (w *Window) updateBlock(update Update) {
 	for _, block := range w.blocks {
-		if block.Name == options.Name {
+		if block.Name == update.Name {
 			block.updateLabel()
 			break
 		}
