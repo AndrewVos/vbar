@@ -158,10 +158,6 @@ func enableTransparency(window *gtk.Window) error {
 	return nil
 }
 
-type serverResult struct {
-	Success bool
-}
-
 type cssOptions struct {
 	Class string
 	Value string
@@ -186,18 +182,8 @@ func sendAddCSS() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer resp.Body.Close()
+	result, err := decodeHandlerResult(resp)
 
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	var result serverResult
-	err = json.Unmarshal(body, &result)
-	if err != nil {
-		log.Fatal(err)
-	}
 	if result.Success == false {
 		log.Fatal("Command failed.")
 	}
@@ -228,19 +214,11 @@ func sendAddBlock() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer resp.Body.Close()
 
-	body, err := ioutil.ReadAll(resp.Body)
+	result, err := decodeHandlerResult(resp)
 	if err != nil {
 		log.Fatal(err)
-	}
-
-	var result serverResult
-	err = json.Unmarshal(body, &result)
-	if err != nil {
-		log.Fatal(err)
-	}
-	if result.Success == false {
+	} else if result.Success == false {
 		log.Fatal("Command failed.")
 	}
 }
@@ -270,19 +248,11 @@ func sendAddMenu() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer resp.Body.Close()
 
-	body, err := ioutil.ReadAll(resp.Body)
+	result, err := decodeHandlerResult(resp)
 	if err != nil {
 		log.Fatal(err)
-	}
-
-	var result serverResult
-	err = json.Unmarshal(body, &result)
-	if err != nil {
-		log.Fatal(err)
-	}
-	if result.Success == false {
+	} else if result.Success == false {
 		log.Fatal("Command failed.")
 	}
 }
@@ -305,19 +275,11 @@ func sendUpdate() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer resp.Body.Close()
 
-	body, err := ioutil.ReadAll(resp.Body)
+	result, err := decodeHandlerResult(resp)
 	if err != nil {
 		log.Fatal(err)
-	}
-
-	var result serverResult
-	err = json.Unmarshal(body, &result)
-	if err != nil {
-		log.Fatal(err)
-	}
-	if result.Success == false {
+	} else if result.Success == false {
 		log.Fatal("Command failed.")
 	}
 }
@@ -331,14 +293,13 @@ func addBlockHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	defer r.Body.Close()
 
-	window.addBlock(&options)
-
-	result := serverResult{Success: true}
-	jsonValue, err := json.Marshal(result)
+	err = window.addBlock(&options)
 	if err != nil {
-		log.Fatal(err)
+		fmt.Fprintf(w, dumpHandlerResult(false))
+		return
 	}
-	fmt.Fprintf(w, string(jsonValue))
+
+	fmt.Fprintf(w, dumpHandlerResult(true))
 }
 
 func addMenuHandler(w http.ResponseWriter, r *http.Request) {
@@ -350,18 +311,45 @@ func addMenuHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	defer r.Body.Close()
 
-	result := serverResult{Success: true}
-
 	err = window.addMenu(options)
 	if err != nil {
-		result.Success = false
+		fmt.Fprintf(w, dumpHandlerResult(false))
+		return
 	}
+
+	fmt.Fprintf(w, dumpHandlerResult(true))
+}
+
+type handlerResult struct {
+	Success bool
+}
+
+func decodeHandlerResult(response *http.Response) (handlerResult, error) {
+	defer response.Body.Close()
+	body, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		return handlerResult{}, err
+	}
+
+	var result handlerResult
+	err = json.Unmarshal(body, &result)
+	if err != nil {
+		return handlerResult{}, err
+	}
+
+	return result, nil
+}
+
+func dumpHandlerResult(success bool) string {
+	result := struct {
+		Success bool
+	}{Success: success}
 
 	jsonValue, err := json.Marshal(result)
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Fprintf(w, string(jsonValue))
+	return string(jsonValue)
 }
 
 func addCSSHandler(w http.ResponseWriter, r *http.Request) {
@@ -373,14 +361,9 @@ func addCSSHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	defer r.Body.Close()
 
-	cssApplier.Apply(options)
+	window.applyCSS(options)
 
-	result := serverResult{Success: true}
-	jsonValue, err := json.Marshal(result)
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Fprintf(w, string(jsonValue))
+	fmt.Fprintf(w, dumpHandlerResult(true))
 }
 
 func updateHandler(w http.ResponseWriter, r *http.Request) {
@@ -394,15 +377,8 @@ func updateHandler(w http.ResponseWriter, r *http.Request) {
 
 	window.updateBlock(options)
 
-	result := serverResult{Success: true}
-	jsonValue, err := json.Marshal(result)
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Fprintf(w, string(jsonValue))
+	fmt.Fprintf(w, dumpHandlerResult(true))
 }
-
-var cssApplier CSSApplier
 
 func startVbar() {
 	gtk.Init(nil)
@@ -412,12 +388,6 @@ func startVbar() {
 		log.Fatal(err)
 	}
 	window = w
-
-	screen, err := window.gtkWindow.GetScreen()
-	if err != nil {
-		log.Fatal(err)
-	}
-	cssApplier = CSSApplier{Screen: screen}
 
 	go listenForCommands()
 	executeConfig()

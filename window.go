@@ -21,6 +21,7 @@ type Window struct {
 	lastCenterBlock *gtk.EventBox
 	lastRightBlock  *gtk.EventBox
 	blocks          []*blockOptions
+	cssApplier      *CSSApplier
 }
 
 // WindowNew creates a new Window
@@ -67,20 +68,18 @@ func WindowNew() (*Window, error) {
 	return window, nil
 }
 
-func (w *Window) addBlock(options *blockOptions) {
+func (w *Window) addBlock(options *blockOptions) error {
 	w.blocks = append(w.blocks, options)
 
 	eventBox, err := gtk.EventBoxNew()
 	if err != nil {
-		log.Println(err)
-		return
+		return err
 	}
 	options.EventBox = eventBox
 
 	label, err := gtk.LabelNew(options.Text)
 	if err != nil {
-		log.Println(err)
-		return
+		return err
 	}
 	applyClass(&label.Widget, "block")
 	applyClass(&label.Widget, options.Name)
@@ -128,6 +127,26 @@ func (w *Window) addBlock(options *blockOptions) {
 	}
 
 	window.gtkWindow.ShowAll()
+
+	return nil
+}
+
+func (w *Window) applyCSS(options cssOptions) error {
+	if w.cssApplier == nil {
+		w.cssApplier = &CSSApplier{}
+	}
+
+	screen, err := window.gtkWindow.GetScreen()
+	if err != nil {
+		return err
+	}
+
+	err = w.cssApplier.Apply(screen, options)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (w *Window) addMenu(options menuOptions) error {
