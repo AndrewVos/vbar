@@ -23,6 +23,14 @@ A lightweight bar written in golang
 
 ## Installation
 
+### From source
+
+You'll need a working `golang`.
+
+```bash
+go get github.com/AndrewVos/vbar
+```
+
 ### Arch Linux
 
 AUR: [vbar-git](https://aur.archlinux.org/packages/vbar-git)
