@@ -136,16 +136,6 @@ Run the following on startup inside your window manager:
 xprop -root -spy _NET_ACTIVE_WINDOW | while read -r LINE; do vbar update --name title; done &
 ```
 
-### Hiding or showing blocks
-
-You can hide or show blocks using the `hide` and `show` commands.
-
-For example:
-
-```bash
-vbar hide --name wireless --name battery
-```
-
 ### Adding custom styles
 
 Everything in `vbar` can be styled with css.
