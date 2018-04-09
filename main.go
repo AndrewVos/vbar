@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -17,6 +18,8 @@ import (
 
 var (
 	app = kingpin.New("vbar", "A bar.")
+
+	port = app.Flag("port", "Port to use for the command server.").Default("5643").OverrideDefaultFromEnvar("PORT").Int()
 
 	commandStart = app.Command("start", "Start vbar.")
 
@@ -103,7 +106,7 @@ func listenForCommands() {
 	http.HandleFunc("/add-block", addBlockHandler)
 	http.HandleFunc("/add-menu", addMenuHandler)
 	http.HandleFunc("/update", updateHandler)
-	err := http.ListenAndServe(":5643", nil)
+	err := http.ListenAndServe(fmt.Sprintf(":%d", *port), nil)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -121,7 +124,7 @@ func sendAddCSS() {
 	}
 
 	resp, err := http.Post(
-		"http://localhost:5643/add-css",
+		fmt.Sprintf("http://localhost:%d/add-css", *port),
 		"application/json",
 		bytes.NewBuffer(jsonValue),
 	)
@@ -149,7 +152,7 @@ func sendAddBlock() {
 	}
 
 	resp, err := http.Post(
-		"http://localhost:5643/add-block",
+		fmt.Sprintf("http://localhost:%d/add-block", *port),
 		"application/json",
 		bytes.NewBuffer(jsonValue),
 	)
@@ -171,7 +174,7 @@ func sendAddMenu() {
 	}
 
 	resp, err := http.Post(
-		"http://localhost:5643/add-menu",
+		fmt.Sprintf("http://localhost:%d/add-menu", *port),
 		"application/json",
 		bytes.NewBuffer(jsonValue),
 	)
@@ -192,7 +195,7 @@ func sendUpdate() {
 	}
 
 	resp, err := http.Post(
-		"http://localhost:5643/update",
+		fmt.Sprintf("http://localhost:%d/update", *port),
 		"application/json",
 		bytes.NewBuffer(jsonValue),
 	)
