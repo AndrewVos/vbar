@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"strings"
 
+	"github.com/gotk3/gotk3/glib"
 	"github.com/gotk3/gotk3/gtk"
 )
 
@@ -32,10 +33,19 @@ func (b *Block) updateLabel() {
 
 	stdout, err := cmd.Output()
 	if err == nil {
-		b.Label.SetText(strings.TrimSpace(string(stdout)))
+		b.setText(strings.TrimSpace(string(stdout)))
 	} else {
 		log.Printf("Command finished with error: %v", err)
-		b.Label.SetText("ERROR")
+		b.setText("ERROR")
+	}
+}
+
+func (b *Block) setText(text string) {
+	_, err := glib.IdleAdd(func(text string) {
+		b.Label.SetText(text)
+	}, text)
+	if err != nil {
+		log.Panicf("Error setting text: %v", err)
 	}
 }
 
@@ -47,23 +57,23 @@ func (b *Block) updateLabelForever() {
 		stdout, err := cmd.StdoutPipe()
 		if err != nil {
 			log.Printf("Couldn't get a stdout from command: %v", err)
-			b.Label.SetText("ERROR")
+			b.setText("ERROR")
 			return
 		}
 		err = cmd.Start()
 		if err != nil {
 			log.Printf("Command finished with error: %v", err)
-			b.Label.SetText("ERROR")
+			b.setText("ERROR")
 			return
 		}
 
 		scanner := bufio.NewScanner(stdout)
 		for scanner.Scan() {
-			b.Label.SetText(strings.TrimSpace(scanner.Text()))
+			b.setText(strings.TrimSpace(scanner.Text()))
 		}
 		if err := scanner.Err(); err != nil {
 			log.Printf("Couldn't read from command stdout: %v", err)
-			b.Label.SetText("ERROR")
+			b.setText("ERROR")
 			return
 		}
 	}()

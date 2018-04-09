@@ -3,16 +3,14 @@ package main
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 	"os/exec"
 	"path"
-	"sync"
 
 	"github.com/cep21/xdgbasedir"
+	"github.com/gotk3/gotk3/glib"
 	"github.com/gotk3/gotk3/gtk"
 	"gopkg.in/alecthomas/kingpin.v2"
 )
@@ -46,7 +44,6 @@ var (
 	flagUpdateBlockName = commandUpdate.Flag("name", "Block name.").Required().String()
 
 	window *Window
-	mutex  = &sync.Mutex{}
 )
 
 func main() {
@@ -131,11 +128,7 @@ func sendAddCSS() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	result, err := decodeHandlerResult(resp)
-
-	if result.Success == false {
-		log.Fatal("Command failed.")
-	}
+	defer resp.Body.Close()
 }
 
 func sendAddBlock() {
@@ -163,13 +156,7 @@ func sendAddBlock() {
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	result, err := decodeHandlerResult(resp)
-	if err != nil {
-		log.Fatal(err)
-	} else if result.Success == false {
-		log.Fatal("Command failed.")
-	}
+	defer resp.Body.Close()
 }
 
 func sendAddMenu() {
@@ -191,13 +178,7 @@ func sendAddMenu() {
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	result, err := decodeHandlerResult(resp)
-	if err != nil {
-		log.Fatal(err)
-	} else if result.Success == false {
-		log.Fatal("Command failed.")
-	}
+	defer resp.Body.Close()
 }
 
 func sendUpdate() {
@@ -218,19 +199,10 @@ func sendUpdate() {
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	result, err := decodeHandlerResult(resp)
-	if err != nil {
-		log.Fatal(err)
-	} else if result.Success == false {
-		log.Fatal("Command failed.")
-	}
+	defer resp.Body.Close()
 }
 
 func addCSSHandler(w http.ResponseWriter, r *http.Request) {
-	mutex.Lock()
-	defer mutex.Unlock()
-
 	decoder := json.NewDecoder(r.Body)
 	var addCSS AddCSS
 	err := decoder.Decode(&addCSS)
@@ -239,15 +211,18 @@ func addCSSHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	defer r.Body.Close()
 
-	window.applyCSS(addCSS)
-
-	fmt.Fprintf(w, dumpHandlerResult(true))
+	_, err = glib.IdleAdd(func() {
+		window.applyCSS(addCSS)
+		if err != nil {
+			log.Fatal(err)
+		}
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
 }
 
 func addBlockHandler(w http.ResponseWriter, r *http.Request) {
-	mutex.Lock()
-	defer mutex.Unlock()
-
 	decoder := json.NewDecoder(r.Body)
 	var block Block
 	err := decoder.Decode(&block)
@@ -256,19 +231,18 @@ func addBlockHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	defer r.Body.Close()
 
-	err = window.addBlock(&block)
+	_, err = glib.IdleAdd(func() {
+		err = window.addBlock(&block)
+		if err != nil {
+			log.Fatal(err)
+		}
+	})
 	if err != nil {
-		fmt.Fprintf(w, dumpHandlerResult(false))
-		return
+		log.Fatal(err)
 	}
-
-	fmt.Fprintf(w, dumpHandlerResult(true))
 }
 
 func addMenuHandler(w http.ResponseWriter, r *http.Request) {
-	mutex.Lock()
-	defer mutex.Unlock()
-
 	decoder := json.NewDecoder(r.Body)
 	var addMenu AddMenu
 	err := decoder.Decode(&addMenu)
@@ -277,19 +251,18 @@ func addMenuHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	defer r.Body.Close()
 
-	err = window.addMenu(addMenu)
+	_, err = glib.IdleAdd(func() {
+		err = window.addMenu(addMenu)
+		if err != nil {
+			log.Fatal(err)
+		}
+	})
 	if err != nil {
-		fmt.Fprintf(w, dumpHandlerResult(false))
-		return
+		log.Fatal(err)
 	}
-
-	fmt.Fprintf(w, dumpHandlerResult(true))
 }
 
 func updateHandler(w http.ResponseWriter, r *http.Request) {
-	mutex.Lock()
-	defer mutex.Unlock()
-
 	decoder := json.NewDecoder(r.Body)
 	var update Update
 	err := decoder.Decode(&update)
@@ -298,39 +271,13 @@ func updateHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	defer r.Body.Close()
 
-	window.updateBlock(update)
-
-	fmt.Fprintf(w, dumpHandlerResult(true))
-}
-
-type handlerResult struct {
-	Success bool
-}
-
-func decodeHandlerResult(response *http.Response) (handlerResult, error) {
-	defer response.Body.Close()
-	body, err := ioutil.ReadAll(response.Body)
-	if err != nil {
-		return handlerResult{}, err
-	}
-
-	var result handlerResult
-	err = json.Unmarshal(body, &result)
-	if err != nil {
-		return handlerResult{}, err
-	}
-
-	return result, nil
-}
-
-func dumpHandlerResult(success bool) string {
-	result := struct {
-		Success bool
-	}{Success: success}
-
-	jsonValue, err := json.Marshal(result)
+	_, err = glib.IdleAdd(func() {
+		err := window.updateBlock(update)
+		if err != nil {
+			log.Fatal(err)
+		}
+	})
 	if err != nil {
 		log.Fatal(err)
 	}
-	return string(jsonValue)
 }
