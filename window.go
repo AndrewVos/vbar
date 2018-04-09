@@ -96,9 +96,6 @@ func (w *Window) addBlock(block *Block) error {
 	}
 
 	if block.Command != "" {
-		if block.Name == "title" {
-			os.Exit(1)
-		}
 		block.updateLabel()
 
 		if block.Interval != 0 {
