@@ -12,6 +12,7 @@ import (
 
 	"github.com/gotk3/gotk3/gdk"
 	"github.com/gotk3/gotk3/gtk"
+	"github.com/gotk3/gotk3/pango"
 )
 
 // Window is the container for the panel
@@ -88,11 +89,11 @@ func (w *Window) addBlock(block *Block) error {
 	eventBox.Add(label)
 
 	if block.Left {
-		w.addBlockLeft(eventBox)
+		w.addBlockLeft(block)
 	} else if block.Center {
-		w.addBlockCenter(eventBox)
+		w.addBlockCenter(block)
 	} else if block.Right {
-		w.addBlockRight(eventBox)
+		w.addBlockRight(block)
 	}
 
 	if block.Command != "" {
@@ -148,98 +149,108 @@ func (w *Window) applyCSS(addCSS AddCSS) error {
 }
 
 func (w *Window) addMenu(addMenu AddMenu) error {
-	for _, block := range w.blocks {
-		if block.Name == addMenu.Name {
-			if block.Menu == nil {
-				menu, err := gtk.MenuNew()
-				if err != nil {
-					log.Fatal(err)
-				}
-				block.Menu = menu
-
-				applyClass(&block.Menu.Widget, "menu")
-
-				block.EventBox.Connect("button-release-event", func() {
-					popupMenuAt(&block.EventBox.Widget, block.Menu)
-				})
-			}
-
-			menuItem, err := gtk.MenuItemNewWithLabel(addMenu.Text)
-			if err != nil {
-				log.Fatal(err)
-			}
-			menuItem.Connect("activate", func() {
-				cmd := exec.Command("/bin/bash", "-c", addMenu.Command)
-				cmd.Stdout = os.Stdout
-				cmd.Stderr = os.Stderr
-
-				err = cmd.Run()
-				if err != nil {
-					log.Printf("Command finished with error: %v", err)
-				}
-			})
-			block.Menu.Add(menuItem)
-			block.Menu.ShowAll()
-		}
+	block := w.findBlock(addMenu.Name)
+	if block == nil {
+		return errors.New(fmt.Sprintf("Couldn't find block %s.", addMenu.Name))
 	}
+
+	if block.Menu == nil {
+		menu, err := gtk.MenuNew()
+		if err != nil {
+			log.Fatal(err)
+		}
+		block.Menu = menu
+
+		applyClass(&block.Menu.Widget, "menu")
+
+		block.EventBox.Connect("button-release-event", func() {
+			popupMenuAt(&block.EventBox.Widget, block.Menu)
+		})
+	}
+
+	menuItem, err := gtk.MenuItemNewWithLabel(addMenu.Text)
+	if err != nil {
+		log.Fatal(err)
+	}
+	menuItem.Connect("activate", func() {
+		cmd := exec.Command("/bin/bash", "-c", addMenu.Command)
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+
+		err = cmd.Run()
+		if err != nil {
+			log.Printf("Command finished with error: %v", err)
+		}
+	})
+	block.Menu.Add(menuItem)
+	block.Menu.ShowAll()
 
 	return nil
 }
 
 func (w *Window) updateBlock(update Update) error {
+	block := w.findBlock(update.Name)
+	if block == nil {
+		return errors.New(fmt.Sprintf("Couldn't find block %s.", update.Name))
+	}
+
+	block.updateLabel()
+	return nil
+}
+
+func (w *Window) findBlock(name string) *Block {
 	for _, block := range w.blocks {
-		if block.Name == update.Name {
-			block.updateLabel()
-			return nil
+		if block.Name == name {
+			return block
 		}
 	}
-
-	return errors.New("Couldn't find block named " + update.Name + ".")
+	return nil
 }
 
-func (w *Window) addBlockLeft(block *gtk.EventBox) {
-	block.SetHAlign(gtk.ALIGN_START)
+func (w *Window) addBlockLeft(block *Block) {
+	block.EventBox.SetHAlign(gtk.ALIGN_START)
 
 	if w.lastLeftBlock != nil {
-		w.gtkPanel.AttachNextTo(block, w.lastLeftBlock, gtk.POS_RIGHT, 1, 1)
+		w.gtkPanel.AttachNextTo(block.EventBox, w.lastLeftBlock, gtk.POS_RIGHT, 1, 1)
 	} else if w.lastCenterBlock != nil {
-		w.gtkPanel.AttachNextTo(block, w.lastCenterBlock, gtk.POS_LEFT, 1, 1)
+		w.gtkPanel.AttachNextTo(block.EventBox, w.lastCenterBlock, gtk.POS_LEFT, 1, 1)
 	} else if w.lastRightBlock != nil {
-		w.gtkPanel.AttachNextTo(block, w.lastRightBlock, gtk.POS_LEFT, 1, 1)
+		w.gtkPanel.AttachNextTo(block.EventBox, w.lastRightBlock, gtk.POS_LEFT, 1, 1)
 	} else {
-		w.gtkPanel.Attach(block, 0, 0, 1, 1)
+		w.gtkPanel.Attach(block.EventBox, 0, 0, 1, 1)
 	}
-	w.lastLeftBlock = block
+	w.lastLeftBlock = block.EventBox
 }
 
-func (w *Window) addBlockCenter(block *gtk.EventBox) {
-	block.SetHAlign(gtk.ALIGN_CENTER)
-	block.SetHExpand(true)
+func (w *Window) addBlockCenter(block *Block) {
+	block.EventBox.SetHAlign(gtk.ALIGN_CENTER)
+	block.EventBox.SetHExpand(true)
+	block.Label.SetEllipsize(pango.ELLIPSIZE_END)
 
 	if w.lastCenterBlock != nil {
-		w.gtkPanel.AttachNextTo(block, w.lastCenterBlock, gtk.POS_RIGHT, 1, 1)
+		w.gtkPanel.AttachNextTo(block.EventBox, w.lastCenterBlock, gtk.POS_RIGHT, 1, 1)
 	} else if w.lastLeftBlock != nil {
-		w.gtkPanel.AttachNextTo(block, w.lastLeftBlock, gtk.POS_RIGHT, 1, 1)
+		w.gtkPanel.AttachNextTo(block.EventBox, w.lastLeftBlock, gtk.POS_RIGHT, 1, 1)
 	} else if w.lastRightBlock != nil {
-		w.gtkPanel.AttachNextTo(block, w.lastRightBlock, gtk.POS_LEFT, 1, 1)
+		w.gtkPanel.AttachNextTo(block.EventBox, w.lastRightBlock, gtk.POS_LEFT, 1, 1)
 	} else {
-		w.gtkPanel.Attach(block, 0, 0, 1, 1)
+		w.gtkPanel.Attach(block.EventBox, 0, 0, 1, 1)
 	}
-	w.lastCenterBlock = block
+	w.lastCenterBlock = block.EventBox
 
 }
 
-func (w *Window) addBlockRight(block *gtk.EventBox) {
-	block.SetHAlign(gtk.ALIGN_END)
+func (w *Window) addBlockRight(block *Block) {
+	block.EventBox.SetHAlign(gtk.ALIGN_END)
 
 	if w.lastRightBlock != nil {
-		w.gtkPanel.AttachNextTo(block, w.lastRightBlock, gtk.POS_RIGHT, 1, 1)
+		w.gtkPanel.AttachNextTo(block.EventBox, w.lastRightBlock, gtk.POS_RIGHT, 1, 1)
 	} else if w.lastCenterBlock != nil {
-		w.gtkPanel.AttachNextTo(block, w.lastCenterBlock, gtk.POS_RIGHT, 1, 1)
+		w.gtkPanel.AttachNextTo(block.EventBox, w.lastCenterBlock, gtk.POS_RIGHT, 1, 1)
 	} else if w.lastLeftBlock != nil {
-		w.gtkPanel.AttachNextTo(block, w.lastLeftBlock, gtk.POS_RIGHT, 1, 1)
+		w.gtkPanel.AttachNextTo(block.EventBox, w.lastLeftBlock, gtk.POS_RIGHT, 1, 1)
 	} else {
-		w.gtkPanel.Attach(block, 0, 0, 1, 1)
+		w.gtkPanel.Attach(block.EventBox, 0, 0, 1, 1)
 	}
-	w.lastRightBlock = block
+	w.lastRightBlock = block.EventBox
 }
