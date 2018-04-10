@@ -15,10 +15,10 @@ import (
 	"github.com/gotk3/gotk3/pango"
 )
 
-// Window is the container for the panel
+// Window is the container for the bar
 type Window struct {
 	gtkWindow       *gtk.Window
-	gtkPanel        *gtk.Grid
+	gtkBar          *gtk.Grid
 	lastLeftBlock   *gtk.EventBox
 	lastCenterBlock *gtk.EventBox
 	lastRightBlock  *gtk.EventBox
@@ -53,17 +53,18 @@ func WindowNew() (*Window, error) {
 
 	window.gtkWindow.Connect("realize", func() {
 		window.gtkWindow.ShowAll()
-		updateDimensions(window.gtkWindow, &window.gtkPanel.Widget)
+		updateDimensions(window.gtkWindow, &window.gtkBar.Widget)
 	})
 
-	gtkPanel, err := gtk.GridNew()
+	gtkBar, err := gtk.GridNew()
 	if err != nil {
 		log.Fatal(err)
 	}
-	window.gtkPanel = gtkPanel
+	window.gtkBar = gtkBar
 
-	applyClass(&window.gtkPanel.Widget, "panel")
-	window.gtkWindow.Add(window.gtkPanel)
+	window.gtkWindow.Add(window.gtkBar)
+
+	applyClass(&window.gtkBar.Widget, "bar")
 
 	enableTransparency(window.gtkWindow)
 
@@ -211,13 +212,13 @@ func (w *Window) addBlockLeft(block *Block) {
 	block.EventBox.SetHAlign(gtk.ALIGN_START)
 
 	if w.lastLeftBlock != nil {
-		w.gtkPanel.AttachNextTo(block.EventBox, w.lastLeftBlock, gtk.POS_RIGHT, 1, 1)
+		w.gtkBar.AttachNextTo(block.EventBox, w.lastLeftBlock, gtk.POS_RIGHT, 1, 1)
 	} else if w.lastCenterBlock != nil {
-		w.gtkPanel.AttachNextTo(block.EventBox, w.lastCenterBlock, gtk.POS_LEFT, 1, 1)
+		w.gtkBar.AttachNextTo(block.EventBox, w.lastCenterBlock, gtk.POS_LEFT, 1, 1)
 	} else if w.lastRightBlock != nil {
-		w.gtkPanel.AttachNextTo(block.EventBox, w.lastRightBlock, gtk.POS_LEFT, 1, 1)
+		w.gtkBar.AttachNextTo(block.EventBox, w.lastRightBlock, gtk.POS_LEFT, 1, 1)
 	} else {
-		w.gtkPanel.Attach(block.EventBox, 0, 0, 1, 1)
+		w.gtkBar.Attach(block.EventBox, 0, 0, 1, 1)
 	}
 	w.lastLeftBlock = block.EventBox
 }
@@ -228,13 +229,13 @@ func (w *Window) addBlockCenter(block *Block) {
 	block.Label.SetEllipsize(pango.ELLIPSIZE_END)
 
 	if w.lastCenterBlock != nil {
-		w.gtkPanel.AttachNextTo(block.EventBox, w.lastCenterBlock, gtk.POS_RIGHT, 1, 1)
+		w.gtkBar.AttachNextTo(block.EventBox, w.lastCenterBlock, gtk.POS_RIGHT, 1, 1)
 	} else if w.lastLeftBlock != nil {
-		w.gtkPanel.AttachNextTo(block.EventBox, w.lastLeftBlock, gtk.POS_RIGHT, 1, 1)
+		w.gtkBar.AttachNextTo(block.EventBox, w.lastLeftBlock, gtk.POS_RIGHT, 1, 1)
 	} else if w.lastRightBlock != nil {
-		w.gtkPanel.AttachNextTo(block.EventBox, w.lastRightBlock, gtk.POS_LEFT, 1, 1)
+		w.gtkBar.AttachNextTo(block.EventBox, w.lastRightBlock, gtk.POS_LEFT, 1, 1)
 	} else {
-		w.gtkPanel.Attach(block.EventBox, 0, 0, 1, 1)
+		w.gtkBar.Attach(block.EventBox, 0, 0, 1, 1)
 	}
 	w.lastCenterBlock = block.EventBox
 
@@ -244,13 +245,13 @@ func (w *Window) addBlockRight(block *Block) {
 	block.EventBox.SetHAlign(gtk.ALIGN_END)
 
 	if w.lastRightBlock != nil {
-		w.gtkPanel.AttachNextTo(block.EventBox, w.lastRightBlock, gtk.POS_RIGHT, 1, 1)
+		w.gtkBar.AttachNextTo(block.EventBox, w.lastRightBlock, gtk.POS_RIGHT, 1, 1)
 	} else if w.lastCenterBlock != nil {
-		w.gtkPanel.AttachNextTo(block.EventBox, w.lastCenterBlock, gtk.POS_RIGHT, 1, 1)
+		w.gtkBar.AttachNextTo(block.EventBox, w.lastCenterBlock, gtk.POS_RIGHT, 1, 1)
 	} else if w.lastLeftBlock != nil {
-		w.gtkPanel.AttachNextTo(block.EventBox, w.lastLeftBlock, gtk.POS_RIGHT, 1, 1)
+		w.gtkBar.AttachNextTo(block.EventBox, w.lastLeftBlock, gtk.POS_RIGHT, 1, 1)
 	} else {
-		w.gtkPanel.Attach(block.EventBox, 0, 0, 1, 1)
+		w.gtkBar.Attach(block.EventBox, 0, 0, 1, 1)
 	}
 	w.lastRightBlock = block.EventBox
 }

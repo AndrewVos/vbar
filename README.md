@@ -10,7 +10,7 @@ A lightweight bar written in golang
 - Blocks can be clickable
 - Blocks can have drop down menus
 - Support for Font Awesome
-- Style anything in the panel with CSS
+- Style anything in the bar with CSS
 - Update blocks with an interval
 
 ## Screenshots
@@ -67,7 +67,7 @@ This will add the block named `my-block` with the text
 
 ##### [--left|--center|--right]
 
-Adds a block to the left/right/center of the panel.
+Adds a block to the left/right/center of the bar.
 
 ##### --name=STRING
 
@@ -149,11 +149,11 @@ xprop -root -spy _NET_ACTIVE_WINDOW | while read -r LINE; do vbar update --name 
 Everything in `vbar` can be styled with css.
 To do this, we use the `add-css` command.
 
-Styling the whole panel:
+Styling the whole bar:
 
 ```bash
-vbar add-css --class "panel" --css "font-family: Hack;"
-vbar add-css --class "panel" --css "color: blue;
+vbar add-css --class "bar" --css "font-family: Hack;"
+vbar add-css --class "bar" --css "color: blue;
 ```
 
 Styling each block:

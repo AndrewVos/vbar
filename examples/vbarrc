@@ -5,12 +5,12 @@ set -e
 cd /home/andrewvos/code/vbar
 vbar="./vbar "
 
-$vbar add-css --class panel --css "font-family: Hack;"
-$vbar add-css --class panel --css "font-weight: normal;"
-$vbar add-css --class panel --css "font-size: 20px;"
-$vbar add-css --class panel --css "text-shadow: none;"
-$vbar add-css --class panel --css "background-color: #1b202a;"
-$vbar add-css --class panel --css "border: 10px solid #1b202a;"
+$vbar add-css --class bar --css "font-family: Hack;"
+$vbar add-css --class bar --css "font-weight: normal;"
+$vbar add-css --class bar --css "font-size: 20px;"
+$vbar add-css --class bar --css "text-shadow: none;"
+$vbar add-css --class bar --css "background-color: #1b202a;"
+$vbar add-css --class bar --css "border: 10px solid #1b202a;"
 
 $vbar add-css --class block --css "padding-top: 5px;"
 $vbar add-css --class block --css "padding-bottom: 5px;"

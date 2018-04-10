@@ -90,7 +90,7 @@ func getMonitorDimensions(window *gtk.Window) (Rectangle, error) {
 	}, nil
 }
 
-func updateDimensions(window *gtk.Window, panel *gtk.Widget) error {
+func updateDimensions(window *gtk.Window, bar *gtk.Widget) error {
 	monitorDimensions, err := getMonitorDimensions(window)
 	if err != nil {
 		return err
@@ -103,7 +103,7 @@ func updateDimensions(window *gtk.Window, panel *gtk.Widget) error {
 
 	C.set_strut_properties(
 		w,
-		0, 0, C.long(panel.GetAllocatedHeight()), 0, /* strut-left, strut-right, strut-top, strut-bottom */
+		0, 0, C.long(bar.GetAllocatedHeight()), 0, /* strut-left, strut-right, strut-top, strut-bottom */
 		0, 0, /* strut-left-start-y, strut-left-end-y */
 		0, 0, /* strut-right-start-y, strut-right-end-y */
 		C.long(monitorDimensions.X), C.long(monitorDimensions.X+monitorDimensions.Width-1), /* strut-top-start-x, strut-top-end-x */
