@@ -215,7 +215,7 @@ func addCSSHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
 	_, err = glib.IdleAdd(func() {
-		window.applyCSS(addCSS)
+		err := window.applyCSS(addCSS)
 		if err != nil {
 			log.Fatal(err)
 		}

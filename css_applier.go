@@ -23,7 +23,7 @@ func (ca *CSSApplier) Apply(screen *gdk.Screen, addCSS AddCSS) error {
 			return err
 		}
 		ca.provider = provider
-		gtk.AddProviderForScreen(screen, provider, 0)
+		gtk.AddProviderForScreen(screen, provider, gtk.STYLE_PROVIDER_PRIORITY_USER)
 	}
 
 	css := ""
