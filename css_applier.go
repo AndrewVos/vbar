@@ -11,12 +11,11 @@ import (
 type CSSApplier struct {
 	addCSS   []AddCSS
 	provider *gtk.CssProvider
+	css      string
 }
 
 // Apply CSS to a gtk.Window.
 func (ca *CSSApplier) Apply(screen *gdk.Screen, addCSS AddCSS) error {
-	ca.addCSS = append(ca.addCSS, addCSS)
-
 	if ca.provider == nil {
 		provider, err := gtk.CssProviderNew()
 		if err != nil {
@@ -26,11 +25,9 @@ func (ca *CSSApplier) Apply(screen *gdk.Screen, addCSS AddCSS) error {
 		gtk.AddProviderForScreen(screen, provider, gtk.STYLE_PROVIDER_PRIORITY_USER)
 	}
 
-	css := ""
-	for _, addCSS := range ca.addCSS {
-		css += fmt.Sprintf(".%s { %s }\n", addCSS.Class, addCSS.Value)
-	}
-	err := ca.provider.LoadFromData(css)
+	ca.css += fmt.Sprintf(".%s { %s }\n", addCSS.Class, addCSS.Value)
+
+	err := ca.provider.LoadFromData(ca.css)
 	if err != nil {
 		return err
 	}
