@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"time"
 
 	"github.com/cep21/xdgbasedir"
 	"github.com/gotk3/gotk3/glib"
@@ -65,6 +66,8 @@ func main() {
 }
 
 func launch() {
+	start := time.Now()
+
 	gtk.Init(nil)
 
 	w, err := WindowNew()
@@ -74,11 +77,14 @@ func launch() {
 	window = w
 
 	go listenForCommands()
+
 	err = executeConfig()
 	if err != nil {
 		log.Println(err)
 	}
 
+	elapsed := time.Since(start)
+	log.Printf("Launch took %s", elapsed)
 	gtk.Main()
 }
 
