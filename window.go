@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"os"
 	"os/exec"
 	"time"
 
@@ -176,9 +175,6 @@ func (w *Window) addMenu(addMenu AddMenu) error {
 	}
 	menuItem.Connect("activate", func() {
 		cmd := exec.Command("/bin/bash", "-c", addMenu.Command)
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-
 		err = cmd.Run()
 		if err != nil {
 			log.Printf("Command finished with error: %v", err)
