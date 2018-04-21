@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"sync"
 	"time"
 
 	"github.com/cep21/xdgbasedir"
@@ -48,6 +49,7 @@ var (
 	flagUpdateBlockName = commandUpdate.Flag("name", "Block name.").Required().String()
 
 	window *Window
+	mutex  = &sync.Mutex{}
 )
 
 func main() {
@@ -107,11 +109,19 @@ func executeConfig() error {
 	return nil
 }
 
+func mutexLockedHandler(h http.HandlerFunc) http.HandlerFunc {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mutex.Lock()
+		defer mutex.Unlock()
+		h.ServeHTTP(w, r)
+	})
+}
+
 func listenForCommands() {
-	http.HandleFunc("/add-css", addCSSHandler)
-	http.HandleFunc("/add-block", addBlockHandler)
-	http.HandleFunc("/add-menu", addMenuHandler)
-	http.HandleFunc("/update", updateHandler)
+	http.HandleFunc("/add-css", mutexLockedHandler(addCSSHandler))
+	http.HandleFunc("/add-block", mutexLockedHandler(addBlockHandler))
+	http.HandleFunc("/add-menu", mutexLockedHandler(addMenuHandler))
+	http.HandleFunc("/update", mutexLockedHandler(updateHandler))
 	err := http.ListenAndServe(fmt.Sprintf(":%d", *port), nil)
 	if err != nil {
 		log.Fatal(err)
