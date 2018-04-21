@@ -62,7 +62,7 @@ func (b *Block) updateLabelForever() {
 		}
 		err = cmd.Start()
 		if err != nil {
-			log.Printf("Command finished with error: %v", err)
+			log.Printf("TailCommand finished with error: %v", err)
 			b.setText("ERROR")
 			return
 		}

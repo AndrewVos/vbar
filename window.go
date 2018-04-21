@@ -120,7 +120,7 @@ func (w *Window) addBlock(block *Block) error {
 				cmd := exec.Command("/bin/bash", "-c", block.ClickCommand)
 				err := cmd.Run()
 				if err != nil {
-					log.Printf("Command finished with error: %v", err)
+					log.Printf("ClickCommand finished with error: %v", err)
 				}
 			}()
 		})

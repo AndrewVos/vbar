@@ -13,6 +13,7 @@ import (
 	"os/exec"
 	"path"
 	"sync"
+	"time"
 
 	"github.com/cep21/xdgbasedir"
 	"github.com/gotk3/gotk3/glib"
@@ -132,6 +133,10 @@ func listenForCommands() {
 		})
 	}
 
+	http.HandleFunc("/ping", func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte("PONG"))
+	})
+
 	http.HandleFunc("/add-css", handler(func(body []byte) error {
 		var wg sync.WaitGroup
 		wg.Add(1)
@@ -226,7 +231,19 @@ func listenForCommands() {
 	}
 }
 
+func sendPing() {
+	for {
+		_, err := http.Get(fmt.Sprintf("http://localhost:%d/ping", *port))
+		if err == nil {
+			return
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+}
+
 func sendAddCSS() {
+	sendPing()
+
 	addCSS := AddCSS{
 		Class: *flagAddCSSClass,
 		Value: *flagAddCSSValue,
@@ -249,6 +266,8 @@ func sendAddCSS() {
 }
 
 func sendAddBlock() {
+	sendPing()
+
 	block := Block{
 		Name:         *flagAddBlockName,
 		Text:         *flagAddBlockText,
@@ -277,6 +296,8 @@ func sendAddBlock() {
 }
 
 func sendAddMenu() {
+	sendPing()
+
 	addMenu := AddMenu{
 		Name:    *flagAddMenuBlockName,
 		Text:    *flagAddMenuText,
@@ -299,6 +320,8 @@ func sendAddMenu() {
 }
 
 func sendUpdate() {
+	sendPing()
+
 	update := Update{
 		Name: *flagUpdateBlockName,
 	}
