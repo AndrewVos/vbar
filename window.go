@@ -98,17 +98,19 @@ func (w *Window) addBlock(block *Block) error {
 	}
 
 	if block.Command != "" {
-		block.updateLabel()
+		go func() {
+			block.updateLabel()
 
-		if block.Interval != 0 {
-			duration, _ := time.ParseDuration(fmt.Sprintf("%ds", block.Interval))
-			tick := time.Tick(duration)
-			go func() {
-				for range tick {
-					block.updateLabel()
-				}
-			}()
-		}
+			if block.Interval != 0 {
+				duration, _ := time.ParseDuration(fmt.Sprintf("%ds", block.Interval))
+				tick := time.Tick(duration)
+				go func() {
+					for range tick {
+						block.updateLabel()
+					}
+				}()
+			}
+		}()
 	} else if block.TailCommand != "" {
 		block.updateLabelForever()
 	}
