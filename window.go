@@ -117,14 +117,13 @@ func (w *Window) addBlock(block *Block) error {
 
 	if block.ClickCommand != "" {
 		block.EventBox.Connect("button-release-event", func() {
-			cmd := exec.Command("/bin/bash", "-c", block.ClickCommand)
-			cmd.Stdout = os.Stdout
-			cmd.Stderr = os.Stderr
-
-			err = cmd.Run()
-			if err != nil {
-				log.Printf("Command finished with error: %v", err)
-			}
+			go func() {
+				cmd := exec.Command("/bin/bash", "-c", block.ClickCommand)
+				err := cmd.Run()
+				if err != nil {
+					log.Printf("Command finished with error: %v", err)
+				}
+			}()
 		})
 	}
 

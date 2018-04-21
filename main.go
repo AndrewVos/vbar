@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -108,19 +109,117 @@ func executeConfig() error {
 	return nil
 }
 
-func mutexLockedHandler(h http.HandlerFunc) http.HandlerFunc {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		mutex.Lock()
-		defer mutex.Unlock()
-		h.ServeHTTP(w, r)
-	})
-}
+type CommandFunc func(body []byte) error
 
 func listenForCommands() {
-	http.HandleFunc("/add-css", mutexLockedHandler(addCSSHandler))
-	http.HandleFunc("/add-block", mutexLockedHandler(addBlockHandler))
-	http.HandleFunc("/add-menu", mutexLockedHandler(addMenuHandler))
-	http.HandleFunc("/update", mutexLockedHandler(updateHandler))
+	handler := func(c CommandFunc) http.HandlerFunc {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			body, err := ioutil.ReadAll(r.Body)
+			if err != nil {
+				writeError(w, err)
+				return
+			}
+			defer r.Body.Close()
+
+			mutex.Lock()
+			defer mutex.Unlock()
+			err = c(body)
+			if err != nil {
+				writeError(w, err)
+				return
+			}
+			writeSuccess(w)
+		})
+	}
+
+	http.HandleFunc("/add-css", handler(func(body []byte) error {
+		var wg sync.WaitGroup
+		wg.Add(1)
+
+		var command AddCSS
+		err := json.Unmarshal(body, &command)
+		if err != nil {
+			return err
+		}
+
+		var commandError error
+		_, err = glib.IdleAdd(func() {
+			defer wg.Done()
+			commandError = window.applyCSS(command)
+		})
+		if err != nil {
+			return err
+		}
+		wg.Wait()
+		return commandError
+	}))
+
+	http.HandleFunc("/add-block", handler(func(body []byte) error {
+		var wg sync.WaitGroup
+		wg.Add(1)
+
+		var command *Block
+		err := json.Unmarshal(body, &command)
+		if err != nil {
+			return err
+		}
+
+		var commandError error
+		_, err = glib.IdleAdd(func() {
+			defer wg.Done()
+			commandError = window.addBlock(command)
+		})
+		if err != nil {
+			return err
+		}
+		wg.Wait()
+		return commandError
+	}))
+
+	http.HandleFunc("/add-menu", handler(func(body []byte) error {
+		var wg sync.WaitGroup
+		wg.Add(1)
+
+		var command AddMenu
+		err := json.Unmarshal(body, &command)
+		if err != nil {
+			return err
+		}
+
+		var commandError error
+		_, err = glib.IdleAdd(func() {
+			defer wg.Done()
+			commandError = window.addMenu(command)
+		})
+		if err != nil {
+			return err
+		}
+		wg.Wait()
+		return commandError
+	}))
+
+	http.HandleFunc("/update", handler(func(body []byte) error {
+		var wg sync.WaitGroup
+		wg.Add(1)
+
+		var command Update
+		err := json.Unmarshal(body, &command)
+		if err != nil {
+			return err
+		}
+
+		var commandError error
+		_, err = glib.IdleAdd(func() {
+			defer wg.Done()
+			commandError = window.updateBlock(command)
+		})
+		if err != nil {
+			return err
+		}
+		wg.Wait()
+		return commandError
+	}))
+
 	err := http.ListenAndServe(fmt.Sprintf(":%d", *port), nil)
 	if err != nil {
 		log.Panic(err)
@@ -258,115 +357,4 @@ func writeSuccess(w http.ResponseWriter) {
 		log.Panic(err)
 	}
 	io.WriteString(w, string(result))
-}
-
-func addCSSHandler(w http.ResponseWriter, r *http.Request) {
-	decoder := json.NewDecoder(r.Body)
-	var addCSS AddCSS
-	err := decoder.Decode(&addCSS)
-	if err != nil {
-		writeError(w, err)
-		return
-	}
-	defer r.Body.Close()
-
-	var wg sync.WaitGroup
-	wg.Add(1)
-	_, err = glib.IdleAdd(func() {
-		defer wg.Done()
-		err := window.applyCSS(addCSS)
-		if err != nil {
-			writeError(w, err)
-		}
-	})
-	if err != nil {
-		writeError(w, err)
-		return
-	}
-	wg.Wait()
-	writeSuccess(w)
-}
-
-func addBlockHandler(w http.ResponseWriter, r *http.Request) {
-	decoder := json.NewDecoder(r.Body)
-	var block Block
-	err := decoder.Decode(&block)
-	if err != nil {
-		writeError(w, err)
-		return
-	}
-	defer r.Body.Close()
-
-	var wg sync.WaitGroup
-	wg.Add(1)
-	_, err = glib.IdleAdd(func() {
-		defer wg.Done()
-		err = window.addBlock(&block)
-		if err != nil {
-			writeError(w, err)
-			return
-		}
-	})
-	if err != nil {
-		writeError(w, err)
-		return
-	}
-	wg.Wait()
-	writeSuccess(w)
-}
-
-func addMenuHandler(w http.ResponseWriter, r *http.Request) {
-	decoder := json.NewDecoder(r.Body)
-	var addMenu AddMenu
-	err := decoder.Decode(&addMenu)
-	if err != nil {
-		writeError(w, err)
-		return
-	}
-	defer r.Body.Close()
-
-	var wg sync.WaitGroup
-	wg.Add(1)
-	_, err = glib.IdleAdd(func() {
-		defer wg.Done()
-		err = window.addMenu(addMenu)
-		if err != nil {
-			writeError(w, err)
-			return
-		}
-	})
-	if err != nil {
-		writeError(w, err)
-		return
-	}
-	wg.Wait()
-	writeSuccess(w)
-}
-
-func updateHandler(w http.ResponseWriter, r *http.Request) {
-	decoder := json.NewDecoder(r.Body)
-	var update Update
-	err := decoder.Decode(&update)
-	if err != nil {
-		writeError(w, err)
-		return
-	}
-	defer r.Body.Close()
-
-	var wg sync.WaitGroup
-	wg.Add(1)
-	_, err = glib.IdleAdd(func() {
-		defer wg.Done()
-		err := window.updateBlock(update)
-		if err != nil {
-			writeError(w, err)
-			return
-		}
-	})
-	if err != nil {
-		writeError(w, err)
-		return
-	}
-	wg.Wait()
-	writeSuccess(w)
 }
