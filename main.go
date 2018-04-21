@@ -3,14 +3,15 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"os"
 	"os/exec"
 	"path"
 	"sync"
-	"time"
 
 	"github.com/cep21/xdgbasedir"
 	"github.com/gotk3/gotk3/glib"
@@ -68,25 +69,23 @@ func main() {
 }
 
 func launch() {
-	start := time.Now()
-
 	gtk.Init(nil)
 
 	w, err := WindowNew()
 	if err != nil {
-		log.Fatal(err)
+		log.Panic(err)
 	}
 	window = w
 
 	go listenForCommands()
 
-	err = executeConfig()
-	if err != nil {
-		log.Println(err)
-	}
+	go func() {
+		err = executeConfig()
+		if err != nil {
+			log.Panic(err)
+		}
+	}()
 
-	elapsed := time.Since(start)
-	log.Printf("Launch took %s", elapsed)
 	gtk.Main()
 }
 
@@ -124,7 +123,7 @@ func listenForCommands() {
 	http.HandleFunc("/update", mutexLockedHandler(updateHandler))
 	err := http.ListenAndServe(fmt.Sprintf(":%d", *port), nil)
 	if err != nil {
-		log.Fatal(err)
+		log.Panic(err)
 	}
 }
 
@@ -136,7 +135,7 @@ func sendAddCSS() {
 
 	jsonValue, err := json.Marshal(addCSS)
 	if err != nil {
-		log.Fatal(err)
+		log.Panic(err)
 	}
 
 	resp, err := http.Post(
@@ -145,9 +144,9 @@ func sendAddCSS() {
 		bytes.NewBuffer(jsonValue),
 	)
 	if err != nil {
-		log.Fatal(err)
+		log.Panic(err)
 	}
-	defer resp.Body.Close()
+	processResponse(resp.Body)
 }
 
 func sendAddBlock() {
@@ -164,7 +163,7 @@ func sendAddBlock() {
 	}
 	jsonValue, err := json.Marshal(block)
 	if err != nil {
-		log.Fatal(err)
+		log.Panic(err)
 	}
 
 	resp, err := http.Post(
@@ -173,9 +172,9 @@ func sendAddBlock() {
 		bytes.NewBuffer(jsonValue),
 	)
 	if err != nil {
-		log.Fatal(err)
+		log.Panic(err)
 	}
-	defer resp.Body.Close()
+	processResponse(resp.Body)
 }
 
 func sendAddMenu() {
@@ -186,7 +185,7 @@ func sendAddMenu() {
 	}
 	jsonValue, err := json.Marshal(addMenu)
 	if err != nil {
-		log.Fatal(err)
+		log.Panic(err)
 	}
 
 	resp, err := http.Post(
@@ -195,9 +194,9 @@ func sendAddMenu() {
 		bytes.NewBuffer(jsonValue),
 	)
 	if err != nil {
-		log.Fatal(err)
+		log.Panic(err)
 	}
-	defer resp.Body.Close()
+	processResponse(resp.Body)
 }
 
 func sendUpdate() {
@@ -207,7 +206,7 @@ func sendUpdate() {
 
 	jsonValue, err := json.Marshal(update)
 	if err != nil {
-		log.Fatal(err)
+		log.Panic(err)
 	}
 
 	resp, err := http.Post(
@@ -216,9 +215,49 @@ func sendUpdate() {
 		bytes.NewBuffer(jsonValue),
 	)
 	if err != nil {
+		log.Panic(err)
+	}
+	processResponse(resp.Body)
+}
+
+type ServerResponse struct {
+	Error string
+}
+
+func processResponse(body io.ReadCloser) {
+	defer body.Close()
+
+	decoder := json.NewDecoder(body)
+	var serverResponse ServerResponse
+	err := decoder.Decode(&serverResponse)
+	if err != nil {
 		log.Fatal(err)
 	}
-	defer resp.Body.Close()
+	if serverResponse.Error != "" {
+		log.Fatal(errors.New(serverResponse.Error))
+	}
+}
+
+func writeError(w http.ResponseWriter, err error) {
+	serverResponse := ServerResponse{Error: err.Error()}
+
+	w.Header().Set("Content-Type", "application/json")
+	result, err := json.Marshal(serverResponse)
+	if err != nil {
+		log.Panic(err)
+	}
+	io.WriteString(w, string(result))
+}
+
+func writeSuccess(w http.ResponseWriter) {
+	serverResponse := ServerResponse{}
+
+	w.Header().Set("Content-Type", "application/json")
+	result, err := json.Marshal(serverResponse)
+	if err != nil {
+		log.Panic(err)
+	}
+	io.WriteString(w, string(result))
 }
 
 func addCSSHandler(w http.ResponseWriter, r *http.Request) {
@@ -226,19 +265,26 @@ func addCSSHandler(w http.ResponseWriter, r *http.Request) {
 	var addCSS AddCSS
 	err := decoder.Decode(&addCSS)
 	if err != nil {
-		log.Fatal(err)
+		writeError(w, err)
+		return
 	}
 	defer r.Body.Close()
 
+	var wg sync.WaitGroup
+	wg.Add(1)
 	_, err = glib.IdleAdd(func() {
+		defer wg.Done()
 		err := window.applyCSS(addCSS)
 		if err != nil {
-			log.Fatal(err)
+			writeError(w, err)
 		}
 	})
 	if err != nil {
-		log.Fatal(err)
+		writeError(w, err)
+		return
 	}
+	wg.Wait()
+	writeSuccess(w)
 }
 
 func addBlockHandler(w http.ResponseWriter, r *http.Request) {
@@ -246,19 +292,27 @@ func addBlockHandler(w http.ResponseWriter, r *http.Request) {
 	var block Block
 	err := decoder.Decode(&block)
 	if err != nil {
-		log.Fatal(err)
+		writeError(w, err)
+		return
 	}
 	defer r.Body.Close()
 
+	var wg sync.WaitGroup
+	wg.Add(1)
 	_, err = glib.IdleAdd(func() {
+		defer wg.Done()
 		err = window.addBlock(&block)
 		if err != nil {
-			log.Fatal(err)
+			writeError(w, err)
+			return
 		}
 	})
 	if err != nil {
-		log.Fatal(err)
+		writeError(w, err)
+		return
 	}
+	wg.Wait()
+	writeSuccess(w)
 }
 
 func addMenuHandler(w http.ResponseWriter, r *http.Request) {
@@ -266,19 +320,27 @@ func addMenuHandler(w http.ResponseWriter, r *http.Request) {
 	var addMenu AddMenu
 	err := decoder.Decode(&addMenu)
 	if err != nil {
-		log.Fatal(err)
+		writeError(w, err)
+		return
 	}
 	defer r.Body.Close()
 
+	var wg sync.WaitGroup
+	wg.Add(1)
 	_, err = glib.IdleAdd(func() {
+		defer wg.Done()
 		err = window.addMenu(addMenu)
 		if err != nil {
-			log.Fatal(err)
+			writeError(w, err)
+			return
 		}
 	})
 	if err != nil {
-		log.Fatal(err)
+		writeError(w, err)
+		return
 	}
+	wg.Wait()
+	writeSuccess(w)
 }
 
 func updateHandler(w http.ResponseWriter, r *http.Request) {
@@ -286,17 +348,25 @@ func updateHandler(w http.ResponseWriter, r *http.Request) {
 	var update Update
 	err := decoder.Decode(&update)
 	if err != nil {
-		log.Fatal(err)
+		writeError(w, err)
+		return
 	}
 	defer r.Body.Close()
 
+	var wg sync.WaitGroup
+	wg.Add(1)
 	_, err = glib.IdleAdd(func() {
+		defer wg.Done()
 		err := window.updateBlock(update)
 		if err != nil {
-			log.Fatal(err)
+			writeError(w, err)
+			return
 		}
 	})
 	if err != nil {
-		log.Fatal(err)
+		writeError(w, err)
+		return
 	}
+	wg.Wait()
+	writeSuccess(w)
 }
