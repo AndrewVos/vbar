@@ -53,9 +53,10 @@ void set_strut_properties(GtkWindow *window,
 */
 import "C"
 import (
-	"log"
+	"sync"
 	"unsafe"
 
+	"github.com/gotk3/gotk3/glib"
 	"github.com/gotk3/gotk3/gtk"
 )
 
@@ -146,10 +147,27 @@ func enableTransparency(window *gtk.Window) error {
 	return nil
 }
 
-func applyClass(widget *gtk.Widget, class string) {
+func applyClass(widget *gtk.Widget, class string) error {
 	styleContext, err := widget.GetStyleContext()
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	styleContext.AddClass(class)
+	return nil
+}
+
+func executeGtkSync(f func() error) error {
+	var wg sync.WaitGroup
+	wg.Add(1)
+
+	var funcErr error
+	_, err := glib.IdleAdd(func() {
+		defer wg.Done()
+		funcErr = f()
+	})
+	if err != nil {
+		return err
+	}
+	wg.Wait()
+	return funcErr
 }

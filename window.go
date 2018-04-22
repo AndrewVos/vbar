@@ -3,11 +3,9 @@ package main
 import "C"
 
 import (
-	"errors"
 	"fmt"
 	"log"
 	"os/exec"
-	"time"
 
 	"github.com/gotk3/gotk3/gdk"
 	"github.com/gotk3/gotk3/gtk"
@@ -63,7 +61,10 @@ func WindowNew() (*Window, error) {
 
 	window.gtkWindow.Add(window.gtkBar)
 
-	applyClass(&window.gtkBar.Widget, "bar")
+	err = applyClass(&window.gtkBar.Widget, "bar")
+	if err != nil {
+		return nil, err
+	}
 
 	enableTransparency(window.gtkWindow)
 
@@ -72,65 +73,34 @@ func WindowNew() (*Window, error) {
 
 func (w *Window) addBlock(addBlock AddBlock) error {
 	block := &Block{AddBlock: addBlock}
-
 	w.blocks = append(w.blocks, block)
 
-	eventBox, err := gtk.EventBoxNew()
+	err := block.Initialize()
 	if err != nil {
 		return err
 	}
-	block.EventBox = eventBox
 
-	label, err := gtk.LabelNew(block.Text)
+	err = executeGtkSync(func() error {
+		if block.Left {
+			w.addBlockLeft(block)
+		} else if block.Center {
+			w.addBlockCenter(block)
+		} else if block.Right {
+			w.addBlockRight(block)
+		}
+
+		return nil
+	})
 	if err != nil {
 		return err
 	}
-	applyClass(&label.Widget, "block")
-	applyClass(&label.Widget, block.Name)
-	block.Label = label
-	eventBox.Add(label)
 
-	if block.Left {
-		w.addBlockLeft(block)
-	} else if block.Center {
-		w.addBlockCenter(block)
-	} else if block.Right {
-		w.addBlockRight(block)
-	}
+	err = executeGtkSync(func() error {
+		window.gtkWindow.ShowAll()
+		return nil
+	})
 
-	if block.Command != "" {
-		go func() {
-			block.updateLabel()
-
-			if block.Interval != 0 {
-				duration, _ := time.ParseDuration(fmt.Sprintf("%ds", block.Interval))
-				tick := time.Tick(duration)
-				go func() {
-					for range tick {
-						block.updateLabel()
-					}
-				}()
-			}
-		}()
-	} else if block.TailCommand != "" {
-		block.updateLabelForever()
-	}
-
-	if block.ClickCommand != "" {
-		block.EventBox.Connect("button-release-event", func() {
-			go func() {
-				cmd := exec.Command("/bin/bash", "-c", block.ClickCommand)
-				err := cmd.Run()
-				if err != nil {
-					log.Printf("ClickCommand finished with error: %v", err)
-				}
-			}()
-		})
-	}
-
-	window.gtkWindow.ShowAll()
-
-	return nil
+	return err
 }
 
 func (w *Window) addCSS(addCSS AddCSS) error {
@@ -138,63 +108,75 @@ func (w *Window) addCSS(addCSS AddCSS) error {
 		w.cssApplier = &CSSApplier{}
 	}
 
-	screen, err := window.gtkWindow.GetScreen()
-	if err != nil {
-		return err
-	}
+	return executeGtkSync(func() error {
+		screen, err := window.gtkWindow.GetScreen()
+		if err != nil {
+			return err
+		}
 
-	err = w.cssApplier.Apply(screen, addCSS)
-	if err != nil {
-		return err
-	}
+		err = w.cssApplier.Apply(screen, addCSS)
+		if err != nil {
+			return err
+		}
 
-	return nil
+		return nil
+	})
 }
 
 func (w *Window) addMenu(addMenu AddMenu) error {
 	block := w.findBlock(addMenu.Name)
 	if block == nil {
-		return errors.New(fmt.Sprintf("Couldn't find block %s.", addMenu.Name))
+		return fmt.Errorf("couldn't find block %s", addMenu.Name)
 	}
 
 	if block.Menu == nil {
-		menu, err := gtk.MenuNew()
-		if err != nil {
-			log.Fatal(err)
-		}
-		block.Menu = menu
+		err := executeGtkSync(func() error {
+			menu, err := gtk.MenuNew()
+			if err != nil {
+				return err
+			}
+			block.Menu = menu
 
-		applyClass(&block.Menu.Widget, "menu")
+			err = applyClass(&block.Menu.Widget, "menu")
+			if err != nil {
+				return err
+			}
 
-		block.EventBox.Connect("button-release-event", func() {
-			popupMenuAt(&block.EventBox.Widget, block.Menu)
+			_, err = block.EventBox.Connect("button-release-event", func() {
+				popupMenuAt(&block.EventBox.Widget, block.Menu)
+			})
+			return err
 		})
-	}
-
-	menuItem, err := gtk.MenuItemNewWithLabel(addMenu.Text)
-	if err != nil {
-		log.Fatal(err)
-	}
-	menuItem.Connect("activate", func() {
-		cmd := exec.Command("/bin/bash", "-c", addMenu.Command)
-		err = cmd.Run()
 		if err != nil {
-			log.Printf("Command finished with error: %v", err)
+			return err
 		}
-	})
-	block.Menu.Add(menuItem)
-	block.Menu.ShowAll()
+	}
 
-	return nil
+	return executeGtkSync(func() error {
+		menuItem, err := gtk.MenuItemNewWithLabel(addMenu.Text)
+		if err != nil {
+			return err
+		}
+		menuItem.Connect("activate", func() {
+			cmd := exec.Command("/bin/bash", "-c", addMenu.Command)
+			err = cmd.Run()
+			if err != nil {
+				log.Printf("Command finished with error: %v", err)
+			}
+		})
+		block.Menu.Add(menuItem)
+		block.Menu.ShowAll()
+		return nil
+	})
 }
 
 func (w *Window) updateBlock(update Update) error {
 	block := w.findBlock(update.Name)
 	if block == nil {
-		return errors.New(fmt.Sprintf("Couldn't find block %s.", update.Name))
+		return fmt.Errorf("couldn't find block %s", update.Name)
 	}
 
-	block.updateLabel()
+	block.startUpdatingLabel()
 	return nil
 }
 

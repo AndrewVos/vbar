@@ -16,7 +16,6 @@ import (
 	"time"
 
 	"github.com/cep21/xdgbasedir"
-	"github.com/gotk3/gotk3/glib"
 	"github.com/gotk3/gotk3/gtk"
 	"gopkg.in/alecthomas/kingpin.v2"
 )
@@ -198,91 +197,43 @@ func listenForCommands() {
 	})
 
 	http.HandleFunc("/add-css", handler(func(body []byte) error {
-		var wg sync.WaitGroup
-		wg.Add(1)
-
 		var command AddCSS
 		err := json.Unmarshal(body, &command)
 		if err != nil {
 			return err
 		}
 
-		var commandError error
-		_, err = glib.IdleAdd(func() {
-			defer wg.Done()
-			commandError = window.addCSS(command)
-		})
-		if err != nil {
-			return err
-		}
-		wg.Wait()
-		return commandError
+		return window.addCSS(command)
 	}))
 
 	http.HandleFunc("/add-block", handler(func(body []byte) error {
-		var wg sync.WaitGroup
-		wg.Add(1)
-
 		var command AddBlock
 		err := json.Unmarshal(body, &command)
 		if err != nil {
 			return err
 		}
 
-		var commandError error
-		_, err = glib.IdleAdd(func() {
-			defer wg.Done()
-			commandError = window.addBlock(command)
-		})
-		if err != nil {
-			return err
-		}
-		wg.Wait()
-		return commandError
+		return window.addBlock(command)
 	}))
 
 	http.HandleFunc("/add-menu", handler(func(body []byte) error {
-		var wg sync.WaitGroup
-		wg.Add(1)
-
 		var command AddMenu
 		err := json.Unmarshal(body, &command)
 		if err != nil {
 			return err
 		}
 
-		var commandError error
-		_, err = glib.IdleAdd(func() {
-			defer wg.Done()
-			commandError = window.addMenu(command)
-		})
-		if err != nil {
-			return err
-		}
-		wg.Wait()
-		return commandError
+		return window.addMenu(command)
 	}))
 
 	http.HandleFunc("/update", handler(func(body []byte) error {
-		var wg sync.WaitGroup
-		wg.Add(1)
-
 		var command Update
 		err := json.Unmarshal(body, &command)
 		if err != nil {
 			return err
 		}
 
-		var commandError error
-		_, err = glib.IdleAdd(func() {
-			defer wg.Done()
-			commandError = window.updateBlock(command)
-		})
-		if err != nil {
-			return err
-		}
-		wg.Wait()
-		return commandError
+		return window.updateBlock(command)
 	}))
 
 	err := http.ListenAndServe(fmt.Sprintf(":%d", *port), nil)
