@@ -13,7 +13,6 @@ import (
 	"os/exec"
 	"path"
 	"sync"
-	"time"
 
 	"github.com/cep21/xdgbasedir"
 	"github.com/gotk3/gotk3/gtk"
@@ -110,8 +109,6 @@ func launch() {
 }
 
 func sendCommand(path string, command interface{}) {
-	sendPing()
-
 	jsonValue, err := json.Marshal(command)
 	if err != nil {
 		log.Panic(err)
@@ -192,10 +189,6 @@ func listenForCommands() {
 		})
 	}
 
-	http.HandleFunc("/ping", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("PONG"))
-	})
-
 	http.HandleFunc("/add-css", handler(func(body []byte) error {
 		var command AddCSS
 		err := json.Unmarshal(body, &command)
@@ -239,15 +232,5 @@ func listenForCommands() {
 	err := http.ListenAndServe(fmt.Sprintf(":%d", *port), nil)
 	if err != nil {
 		log.Panic(err)
-	}
-}
-
-func sendPing() {
-	for {
-		_, err := http.Get(fmt.Sprintf("http://localhost:%d/ping", *port))
-		if err == nil {
-			return
-		}
-		time.Sleep(10 * time.Millisecond)
 	}
 }
