@@ -60,13 +60,32 @@ func main() {
 	case commandStart.FullCommand():
 		launch()
 	case commandAddCSS.FullCommand():
-		sendAddCSS()
+		sendCommand("add-css", AddCSS{
+			Class: *flagAddCSSClass,
+			Value: *flagAddCSSValue,
+		})
 	case commandAddBlock.FullCommand():
-		sendAddBlock()
+		sendCommand("add-block", Block{
+			Name:         *flagAddBlockName,
+			Text:         *flagAddBlockText,
+			Left:         *flagAddBlockLeft,
+			Center:       *flagAddBlockCenter,
+			Right:        *flagAddBlockRight,
+			Command:      *flagAddBlockCommand,
+			TailCommand:  *flagAddBlockTailCommand,
+			Interval:     *flagAddBlockInterval,
+			ClickCommand: *flagAddBlockClickCommand,
+		})
 	case commandAddMenu.FullCommand():
-		sendAddMenu()
+		sendCommand("add-menu", AddMenu{
+			Name:    *flagAddMenuBlockName,
+			Text:    *flagAddMenuText,
+			Command: *flagAddMenuCommand,
+		})
 	case commandUpdate.FullCommand():
-		sendUpdate()
+		sendCommand("update", Update{
+			Name: *flagUpdateBlockName,
+		})
 	}
 }
 
@@ -91,6 +110,35 @@ func launch() {
 	gtk.Main()
 }
 
+func sendCommand(path string, command interface{}) {
+	sendPing()
+
+	jsonValue, err := json.Marshal(command)
+	if err != nil {
+		log.Panic(err)
+	}
+
+	resp, err := http.Post(
+		fmt.Sprintf("http://localhost:%d/%s", *port, path),
+		"application/json",
+		bytes.NewBuffer(jsonValue),
+	)
+	if err != nil {
+		log.Panic(err)
+	}
+	defer resp.Body.Close()
+
+	decoder := json.NewDecoder(resp.Body)
+	var serverResponse ServerResponse
+	err = decoder.Decode(&serverResponse)
+	if err != nil {
+		log.Fatal(err)
+	}
+	if serverResponse.Error != "" {
+		log.Fatal(errors.New(serverResponse.Error))
+	}
+}
+
 func executeConfig() error {
 	configurationDirectory, err := xdgbasedir.ConfigHomeDirectory()
 	if err != nil {
@@ -110,14 +158,26 @@ func executeConfig() error {
 	return nil
 }
 
-type CommandFunc func(body []byte) error
-
 func listenForCommands() {
-	handler := func(c CommandFunc) http.HandlerFunc {
+	writeResponse := func(w http.ResponseWriter, err error) {
+		serverResponse := ServerResponse{}
+		if err != nil {
+			serverResponse.Error = err.Error()
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		result, err := json.Marshal(serverResponse)
+		if err != nil {
+			log.Panic(err)
+		}
+		io.WriteString(w, string(result))
+	}
+
+	handler := func(c func(body []byte) error) http.HandlerFunc {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			body, err := ioutil.ReadAll(r.Body)
 			if err != nil {
-				writeError(w, err)
+				writeResponse(w, err)
 				return
 			}
 			defer r.Body.Close()
@@ -126,10 +186,10 @@ func listenForCommands() {
 			defer mutex.Unlock()
 			err = c(body)
 			if err != nil {
-				writeError(w, err)
+				writeResponse(w, err)
 				return
 			}
-			writeSuccess(w)
+			writeResponse(w, nil)
 		})
 	}
 
@@ -239,145 +299,4 @@ func sendPing() {
 		}
 		time.Sleep(10 * time.Millisecond)
 	}
-}
-
-func sendAddCSS() {
-	sendPing()
-
-	addCSS := AddCSS{
-		Class: *flagAddCSSClass,
-		Value: *flagAddCSSValue,
-	}
-
-	jsonValue, err := json.Marshal(addCSS)
-	if err != nil {
-		log.Panic(err)
-	}
-
-	resp, err := http.Post(
-		fmt.Sprintf("http://localhost:%d/add-css", *port),
-		"application/json",
-		bytes.NewBuffer(jsonValue),
-	)
-	if err != nil {
-		log.Panic(err)
-	}
-	processResponse(resp.Body)
-}
-
-func sendAddBlock() {
-	sendPing()
-
-	block := Block{
-		Name:         *flagAddBlockName,
-		Text:         *flagAddBlockText,
-		Left:         *flagAddBlockLeft,
-		Center:       *flagAddBlockCenter,
-		Right:        *flagAddBlockRight,
-		Command:      *flagAddBlockCommand,
-		TailCommand:  *flagAddBlockTailCommand,
-		Interval:     *flagAddBlockInterval,
-		ClickCommand: *flagAddBlockClickCommand,
-	}
-	jsonValue, err := json.Marshal(block)
-	if err != nil {
-		log.Panic(err)
-	}
-
-	resp, err := http.Post(
-		fmt.Sprintf("http://localhost:%d/add-block", *port),
-		"application/json",
-		bytes.NewBuffer(jsonValue),
-	)
-	if err != nil {
-		log.Panic(err)
-	}
-	processResponse(resp.Body)
-}
-
-func sendAddMenu() {
-	sendPing()
-
-	addMenu := AddMenu{
-		Name:    *flagAddMenuBlockName,
-		Text:    *flagAddMenuText,
-		Command: *flagAddMenuCommand,
-	}
-	jsonValue, err := json.Marshal(addMenu)
-	if err != nil {
-		log.Panic(err)
-	}
-
-	resp, err := http.Post(
-		fmt.Sprintf("http://localhost:%d/add-menu", *port),
-		"application/json",
-		bytes.NewBuffer(jsonValue),
-	)
-	if err != nil {
-		log.Panic(err)
-	}
-	processResponse(resp.Body)
-}
-
-func sendUpdate() {
-	sendPing()
-
-	update := Update{
-		Name: *flagUpdateBlockName,
-	}
-
-	jsonValue, err := json.Marshal(update)
-	if err != nil {
-		log.Panic(err)
-	}
-
-	resp, err := http.Post(
-		fmt.Sprintf("http://localhost:%d/update", *port),
-		"application/json",
-		bytes.NewBuffer(jsonValue),
-	)
-	if err != nil {
-		log.Panic(err)
-	}
-	processResponse(resp.Body)
-}
-
-type ServerResponse struct {
-	Error string
-}
-
-func processResponse(body io.ReadCloser) {
-	defer body.Close()
-
-	decoder := json.NewDecoder(body)
-	var serverResponse ServerResponse
-	err := decoder.Decode(&serverResponse)
-	if err != nil {
-		log.Fatal(err)
-	}
-	if serverResponse.Error != "" {
-		log.Fatal(errors.New(serverResponse.Error))
-	}
-}
-
-func writeError(w http.ResponseWriter, err error) {
-	serverResponse := ServerResponse{Error: err.Error()}
-
-	w.Header().Set("Content-Type", "application/json")
-	result, err := json.Marshal(serverResponse)
-	if err != nil {
-		log.Panic(err)
-	}
-	io.WriteString(w, string(result))
-}
-
-func writeSuccess(w http.ResponseWriter) {
-	serverResponse := ServerResponse{}
-
-	w.Header().Set("Content-Type", "application/json")
-	result, err := json.Marshal(serverResponse)
-	if err != nil {
-		log.Panic(err)
-	}
-	io.WriteString(w, string(result))
 }
