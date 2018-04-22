@@ -65,7 +65,7 @@ func main() {
 			Value: *flagAddCSSValue,
 		})
 	case commandAddBlock.FullCommand():
-		sendCommand("add-block", Block{
+		sendCommand("add-block", AddBlock{
 			Name:         *flagAddBlockName,
 			Text:         *flagAddBlockText,
 			Left:         *flagAddBlockLeft,
@@ -210,7 +210,7 @@ func listenForCommands() {
 		var commandError error
 		_, err = glib.IdleAdd(func() {
 			defer wg.Done()
-			commandError = window.applyCSS(command)
+			commandError = window.addCSS(command)
 		})
 		if err != nil {
 			return err
@@ -223,7 +223,7 @@ func listenForCommands() {
 		var wg sync.WaitGroup
 		wg.Add(1)
 
-		var command *Block
+		var command AddBlock
 		err := json.Unmarshal(body, &command)
 		if err != nil {
 			return err

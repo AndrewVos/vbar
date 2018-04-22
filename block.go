@@ -13,18 +13,10 @@ import (
 
 // Block is the container class for the gtk.EventBox and gtk.Label.
 type Block struct {
-	EventBox     *gtk.EventBox
-	Label        *gtk.Label
-	Menu         *gtk.Menu
-	Name         string
-	Text         string
-	Left         bool
-	Center       bool
-	Right        bool
-	Command      string
-	TailCommand  string
-	Interval     int
-	ClickCommand string
+	AddBlock
+	EventBox *gtk.EventBox
+	Label    *gtk.Label
+	Menu     *gtk.Menu
 }
 
 func (b *Block) updateLabel() {

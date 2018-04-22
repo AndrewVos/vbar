@@ -70,7 +70,9 @@ func WindowNew() (*Window, error) {
 	return window, nil
 }
 
-func (w *Window) addBlock(block *Block) error {
+func (w *Window) addBlock(addBlock AddBlock) error {
+	block := &Block{AddBlock: addBlock}
+
 	w.blocks = append(w.blocks, block)
 
 	eventBox, err := gtk.EventBoxNew()
@@ -131,7 +133,7 @@ func (w *Window) addBlock(block *Block) error {
 	return nil
 }
 
-func (w *Window) applyCSS(addCSS AddCSS) error {
+func (w *Window) addCSS(addCSS AddCSS) error {
 	if w.cssApplier == nil {
 		w.cssApplier = &CSSApplier{}
 	}
