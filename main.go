@@ -49,6 +49,9 @@ var (
 	commandUpdate       = app.Command("update", "Trigger a block update.")
 	flagUpdateBlockName = commandUpdate.Flag("name", "Block name.").Required().String()
 
+	commandRemove = app.Command("remove", "Remove a block.")
+	flagRemoveBlockName = commandRemove.Flag("name", "Block name.").Required().String()
+
 	window *Window
 	mutex  = &sync.Mutex{}
 )
@@ -83,6 +86,10 @@ func main() {
 	case commandUpdate.FullCommand():
 		sendCommand("update", Update{
 			Name: *flagUpdateBlockName,
+		})
+	case commandRemove.FullCommand():
+		sendCommand("remove", Remove{
+			Name: *flagRemoveBlockName,
 		})
 	}
 }
@@ -229,6 +236,15 @@ func listenForCommands() {
 		return window.updateBlock(command)
 	}))
 
+	http.HandleFunc("/remove", handler(func(body []byte) error {
+		var command Remove
+		err := json.Unmarshal(body, &command)
+		if err != nil {
+			return err
+		}
+
+		return window.removeBlock(command)
+	}))
 	err := http.ListenAndServe(fmt.Sprintf(":%d", *port), nil)
 	if err != nil {
 		log.Panic(err)
