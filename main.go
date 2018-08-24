@@ -49,7 +49,7 @@ var (
 	commandUpdate       = app.Command("update", "Trigger a block update.")
 	flagUpdateBlockName = commandUpdate.Flag("name", "Block name.").Required().String()
 
-	commandRemove = app.Command("remove", "Remove a block.")
+	commandRemove       = app.Command("remove", "Remove a block.")
 	flagRemoveBlockName = commandRemove.Flag("name", "Block name.").Required().String()
 
 	window *Window

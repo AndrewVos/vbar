@@ -245,5 +245,3 @@ func (w *Window) addBlockRight(block *Block) {
 	}
 	w.lastRightBlock = block.EventBox
 }
-
-
