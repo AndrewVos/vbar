@@ -143,6 +143,15 @@ Run the following on startup inside your window manager:
 ```bash
 xprop -root -spy _NET_ACTIVE_WINDOW | while read -r LINE; do vbar update --name title; done &
 ```
+### Removing a block
+
+A block can be removed with the `remove` command. The arguments are the same as the `update` command. For example, if you add a block like this:
+
+    vbar add-block --name time --command "date"
+    
+you can remove it like so:
+
+    vbar remove --name time
 
 ### Adding custom styles
 

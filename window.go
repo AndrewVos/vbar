@@ -180,6 +180,15 @@ func (w *Window) updateBlock(update Update) error {
 	return nil
 }
 
+func (w *Window) removeBlock(remove Remove) error {
+	block := w.findBlock(remove.Name)
+	if block == nil {
+		return fmt.Errorf("couldn't find block %s", remove.Name)
+	}
+	block.EventBox.Destroy()
+	return nil
+}
+
 func (w *Window) findBlock(name string) *Block {
 	for _, block := range w.blocks {
 		if block.Name == name {
