@@ -109,12 +109,9 @@ func (w *Window) addCSS(addCSS AddCSS) error {
 	}
 
 	return executeGtkSync(func() error {
-		screen, err := window.gtkWindow.GetScreen()
-		if err != nil {
-			return err
-		}
+		screen := window.gtkWindow.GetScreen()
 
-		err = w.cssApplier.Apply(screen, addCSS)
+		err := w.cssApplier.Apply(screen, addCSS)
 		if err != nil {
 			return err
 		}
