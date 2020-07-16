@@ -69,10 +69,7 @@ type Rectangle struct {
 }
 
 func getMonitorDimensions(window *gtk.Window) (Rectangle, error) {
-	screen, err := window.GetScreen()
-	if err != nil {
-		return Rectangle{}, err
-	}
+	screen := window.GetScreen()
 	display, err := screen.GetDisplay()
 	if err != nil {
 		return Rectangle{}, err
@@ -130,10 +127,7 @@ func popupMenuAt(widget *gtk.Widget, menu *gtk.Menu) {
 }
 
 func enableTransparency(window *gtk.Window) error {
-	screen, err := window.GetScreen()
-	if err != nil {
-		return err
-	}
+	screen := window.GetScreen()
 
 	visual, err := screen.GetRGBAVisual()
 	if err != nil {
