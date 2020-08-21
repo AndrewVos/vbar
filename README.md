@@ -25,24 +25,37 @@ A lightweight bar written in golang
 
 ### From source
 
+### Ubuntu
+
+NOTE: This build is quite slow for some reason. I think it's because go spends a lot of time compiling C extensions. Sorry about that.
+
 You'll need a working `golang`.
 
 ```bash
+# Install dependencies
+sudo apt install -y libglib2.0-dev libcairo2-dev libgtk-3-dev
+
+# Install vbar
 go get github.com/AndrewVos/vbar
+
+# Copy over an example config
+mkdir -p ~/.config/vbar
+cp $GOPATH/src/github.com/AndrewVos/vbar/examples/vbarrc $HOME/.config/vbar/
 ```
 
 ### Arch Linux
 
+Install the package via the AUR:
+
 AUR: [vbar-git](https://aur.archlinux.org/packages/vbar-git)
 
-## Configuration
-
-It's probably best to start from the example configuration:
-
 ```
+# Copy over an example config
 mkdir -p ~/.config/vbar
 cp /usr/share/doc/vbar/examples/vbarrc ~/.config/vbar
 ```
+
+## Configuration
 
 All configuration is done in the command line, which means
 that `vbar` is very hackable.
