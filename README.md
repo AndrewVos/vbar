@@ -37,6 +37,7 @@ sudo apt install -y libglib2.0-dev libcairo2-dev libgtk-3-dev
 
 # Install vbar
 go get github.com/AndrewVos/vbar
+sudo cp $GOPATH/bin/vbar /usr/local/bin/vbar
 
 # Copy over an example config
 mkdir -p ~/.config/vbar
