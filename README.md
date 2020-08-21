@@ -15,6 +15,8 @@ A lightweight bar written in golang
 
 ## Screenshots
 
+![screenshot of vbar in bswpm](https://raw.githubusercontent.com/AndrewVos/vbar/master/screenshots/bspwm.png)
+
 ![screenshot of vbar](https://raw.githubusercontent.com/AndrewVos/vbar/master/screenshots/simple.png)
 
 ![screenshot of vbar with popup menu](https://raw.githubusercontent.com/AndrewVos/vbar/master/screenshots/popup.png)
