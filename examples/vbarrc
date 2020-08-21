@@ -56,28 +56,22 @@ vbar add-block --left --name power-off-icon --text ""
 vbar add-menu --name power-off-icon --text "Log off" --command "bspc quit"
 vbar add-menu --name power-off-icon --text "Shut down" --command "systemctl poweroff"
 
-# for desktop in $(bspc query --desktops --names); do
-# 	vbar add-css --class "desktop-$desktop" \
-# 		--css "background-color: #1b202a;" \
-# 		--css "letter-spacing: 10px;"
-# 	vbar add-css --class "desktop-$desktop-active" \
-# 		--css "background-color: #1b202a;" \
-# 		--css "letter-spacing: 10px;"
-# 	vbar add-block --left --name "desktop-$desktop" --text ""
-# 	vbar add-block --left --name "desktop-$desktop-active" --text ""
-# done
-
 vbar add-block --center --name title --tail-command "xtitle -s"
 
-vbar add-block --right --name volume-icon --command "volume icon" --click-command "amixer -q sset Master toggle && vbar update --name volume && vbar update --name volume-icon"
+vbar add-block --right --name volume-icon --command "volume.sh icon" --click-command "amixer -q sset Master toggle && vbar update --name volume && vbar update --name volume-icon"
 
-vbar add-block --right --name volume --command "volume percentage"
+vbar add-block --right --name volume --command "volume.sh percentage"
 
 vbar add-block --right --name battery-icon --text ''
 vbar add-block --right --name battery --tail-command "while true; do acpi | cut -d, -f2 | sed 's/ //'; sleep 5; done"
 
-vbar add-block --right --name wireless-icon --text ""
-vbar add-block --right --name wireless --command "netctl-auto list | grep '* ' | sed 's/* //'" --interval 5
+if command netctl-auto; then
+  vbar add-block --right --name wireless-icon --text ""
+  vbar add-block --right --name wireless --command "netctl-auto list | grep '* ' | sed 's/* //'" --interval 5
+elif command iwgetid; then
+  vbar add-block --right --name wireless-icon --text ""
+  vbar add-block --right --name wireless --command "iwgetid -r" --interval 5
+fi
 
 vbar add-block --right --name date --command "date +%d/%m" --interval 60
 vbar add-block --right --name time --command "date +%H:%M" --interval 1

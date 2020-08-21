@@ -41,6 +41,7 @@ go get github.com/AndrewVos/vbar
 # Copy over an example config
 mkdir -p ~/.config/vbar
 cp $GOPATH/src/github.com/AndrewVos/vbar/examples/vbarrc $HOME/.config/vbar/
+# See the configuration section to install extra packages needed for this config
 ```
 
 ### Arch Linux
@@ -53,9 +54,16 @@ AUR: [vbar-git](https://aur.archlinux.org/packages/vbar-git)
 # Copy over an example config
 mkdir -p ~/.config/vbar
 cp /usr/share/doc/vbar/examples/vbarrc ~/.config/vbar
+# See the configuration section to install extra packages needed for this config
 ```
 
 ## Configuration
+
+The example config requires some packages:
+
+- fonts-font-awesome
+- https://github.com/baskerville/xtitle
+- examples/volume.sh in your PATH
 
 All configuration is done in the command line, which means
 that `vbar` is very hackable.
